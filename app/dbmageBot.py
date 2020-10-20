@@ -24,12 +24,20 @@ for thing in ['token', 'amongusbot']:
         else:
             config[thing] = getenv(thing.upper())
 
-if path.exists('/app/db/') and not path.exists('/app/db/bot.db'):
-    try:
-        copyfile('/app/bot.db', '/app/db/bot.db')
-    except Exception as e:
+DB = '/app/db/bot.db'
+if getenv('DB') != None:
+    DB = getenv('DB')
+else:
+    if not path.exists('/'.join(db.split('/')[:-1])):
         print("Unable to create DB: %s" % (e))
         sys.exit(1)
+
+    if not path.exists(DB):
+        try:
+            copyfile('/app/bot.db', DB)
+        except Exception as e:
+            print("Unable to create DB: %s" % (e))
+            sys.exit(1)
 
 description = 'DBMages helper bot'
 ##Normal functions
@@ -37,7 +45,7 @@ def dbConn():
     done = False
     while not done:
         try:
-            conn = sqlite3.connect('bot/bot.db')
+            conn = sqlite3.connect(DB)
             cursor = conn.cursor()
             cursor.execute('create table if not exists dbbot (guild TEXT, dbkey TEXT, dbvalue TEXT)')
             conn.commit()
@@ -45,7 +53,8 @@ def dbConn():
             conn.commit()
             done = True
             return conn
-        except sqlite3.OperationalError:
+        except sqlite3.OperationalError as e:
+            print("Unable to access DB: %s" % (e))
             sleep(1)
             pass
     return False
