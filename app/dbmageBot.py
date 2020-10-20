@@ -39,9 +39,9 @@ def dbConn():
         try:
             conn = sqlite3.connect('bot/bot.db')
             cursor = conn.cursor()
-            cursor.execute('create table if not exists dbbot (dbkey TEXT, dbvalue TEXT)')
+            cursor.execute('create table if not exists dbbot (guild TEXT, dbkey TEXT, dbvalue TEXT)')
             conn.commit()
-            cursor.execute('create table if not exists auscores (player TEXT, crewwin INT, crewloss INT, impwin INT, imploss INT)')
+            cursor.execute('create table if not exists auscores (guild TEXT, player TEXT, crewwin INT, crewloss INT, impwin INT, imploss INT)')
             conn.commit()
             done = True
             return conn
@@ -50,62 +50,62 @@ def dbConn():
             pass
     return False
 
-def dbAdd(dbkey, dbvalue):
+def dbAdd(guild, dbkey, dbvalue):
     conn = dbConn()
     cursor = conn.cursor()
     try:
-        cursor.execute('INSERT INTO dbbot VALUES (?,?)', (dbkey, dbvalue))
+        cursor.execute('INSERT INTO dbbot VALUES (?,?,?)', (guild,dbkey,dbvalue))
         conn.commit()
     except Exception as e:
         print("Unable add %s-%s: %s" % (dbkey, dbvalue, e))
         return False
     return
 
-def dbRem(dbkey):
+def dbRem(guild, dbkey):
     conn = dbConn()
     cursor = conn.cursor()
     try:
-        cursor.execute('DELETE FROM dbbot WHERE dbkey=?', (dbkey,))
+        cursor.execute('DELETE FROM dbbot WHERE dbkey=? AND guild=?', (dbkey,guild))
         conn.commit()
     except Exception as e:
         print("Unable remove data with key %s: %s" % (dbkey, e))
         return False
     return True
 
-def dbFetch(dbkey):
+def dbFetch(guild, dbkey):
     conn = dbConn()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM dbbot WHERE dbkey=?', (dbkey,))
+    cursor.execute('SELECT dbkey,dbvalue FROM dbbot WHERE dbkey=? AND guild=?', (dbkey,guild))
     o = cursor.fetchone()
     if o == None:
         return []
     return tuple(o)
 
-def dbFetchAll():
+def dbFetchAll(guild):
     conn = dbConn()
     cursor = conn.cursor()
-    cursor.execute('SELECT dbkey FROM dbbot')
+    cursor.execute('SELECT dbkey FROM dbbot WHERE guild=?', (guild,))
     o = cursor.fetchall()
     if o == None:
         return []
     return tuple(o)
 
-def scorePlayerAdd(player):
+def scorePlayerAdd(guild, player):
     conn = dbConn()
     cursor = conn.cursor()
     try:
-        cursor.execute('INSERT INTO auscores VALUES (?,0,0,0,0)', (player,))
+        cursor.execute('INSERT INTO auscores VALUES (?,?,0,0,0,0)', (guild,player))
         conn.commit()
     except Exception as e:
         print("Unable add %s: %s" % (player, e))
         return False
     return
 
-def scorePlayerAdjust(player,dbkey,dbvalue):
+def scorePlayerAdjust(guild, player,dbkey,dbvalue):
     conn = dbConn()
     cursor = conn.cursor()
     try:
-        sql = "UPDATE auscores SET %s=? WHERE player=?" % (dbkey)
+        sql = "UPDATE auscores SET %s=? WHERE player=? AND guild=?" % (dbkey,guild)
         cursor.execute(sql, (dbvalue, player))
         conn.commit()
     except Exception as e:
@@ -113,19 +113,19 @@ def scorePlayerAdjust(player,dbkey,dbvalue):
         return False
     return
 
-def scorePlayerGet(player):
+def scorePlayerGet(guild, player):
     conn = dbConn()
     cursor = conn.cursor()
-    cursor.execute('SELECT crewwin, crewloss, impwin, imploss FROM auscores WHERE player=?', (player,))
+    cursor.execute('SELECT crewwin, crewloss, impwin, imploss FROM auscores WHERE player=? AND guild=?', (player,guild))
     o = cursor.fetchone()
     if o == None:
         return []
     return tuple(o)
 
-def scoreBoardGet():
+def scoreBoardGet(guild):
     conn = dbConn()
     cursor = conn.cursor()
-    cursor.execute('SELECT player FROM auscores')
+    cursor.execute('SELECT player FROM auscores WHERE guild=?', (guild,))
     o = cursor.fetchall()
     if o == None:
         return []
@@ -171,6 +171,8 @@ async def on_ready():
 
 @dbbot.event
 async def on_member_join(member):
+    if 'eggsy' not in ctx.message.guild.name.lower():
+        return
     await ctx.send("Hi %s, welcome to the server!\nYou can use .db help to find out more info" % (member.name))
     return
 
@@ -181,9 +183,10 @@ class MessagesCog(dcomm.Cog, name='Messages'):
 
     @dcomm.command(brief='Add a help message/rules/tutorial/useful note', description='Add a message, set of game rules, channel rules, server rules, or just messages you think other will find useful. Remember: Give it a sensible name!')
     async def add(self, ctx, name:str):
+        guild = ctx.message.guild.name
         toremove = len("%s %s %s " % (ctx.prefix, ctx.command, name))-1
         message = ctx.message.content[toremove:]
-        if dbAdd(name, message) == False:
+        if dbAdd(guild, name, message) == False:
             await ctx.send("Sorry that didn't work :cry:")
             await ctx.message.delete()
             return
@@ -193,6 +196,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
 
     @dcomm.command(brief='Delete a help message/rules/tutorial/useful note (Requires admin priv)', description='Delete one of the messages that have been stored. You will need admin privs for that.')
     async def delete(self, ctx, name:str):
+        guild = ctx.message.guild.name
         admin = False
         if "admin" in [y.name.lower() for y in ctx.message.author.roles]:
             admin = True
@@ -205,7 +209,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
             await ctx.send("Sorry I couldn't find %s" % (name))
             await ctx.message.delete()
             return
-        if dbRem(name) == False:
+        if dbRem(guild, name) == False:
             await ctx.send("Sorry that didn't work :cry:")
             await ctx.message.delete()
             return
@@ -215,20 +219,21 @@ class MessagesCog(dcomm.Cog, name='Messages'):
 
     @dcomm.command(brief='Add to a message/rules/tutorial/useful note', description='Add to a message, set of game rules, channel rules, server rules etc.')
     async def append(self, ctx, name:str):
+        guild = ctx.message.guild.name
         toremove = len("%s %s %s " % (ctx.prefix, ctx.command, name))-1
         message = ctx.message.content[toremove:]
-        results = dbFetch(name)
+        results = dbFetch(guild, name)
         if len(results) < 1:
             await ctx.send("Sorry I couldn't find %s" % (name))
             await ctx.message.delete()
             return
         curmsg = results[1]
-        if dbRem(name) == False:
+        if dbRem(guild,name) == False:
             await ctx.send("Sorry that didn't work :cry:")
             await ctx.message.delete()
             return
         newmessage = "%s\n%s" % (curmsg, message)
-        if dbAdd(name, newmessage) == False:
+        if dbAdd(guild, name, newmessage) == False:
             await ctx.send("Sorry that didn't work :cry:")
             await ctx.message.delete()
             return
@@ -238,7 +243,8 @@ class MessagesCog(dcomm.Cog, name='Messages'):
 
     @dcomm.command(brief='List stored messages', description='List stored messages')
     async def list(self, ctx):
-        data = dbFetchAll()
+        guild = ctx.message.guild.name
+        data = dbFetchAll(guild)
         if len(data) < 1:
             await ctx.send('Nothing stored :frowning:')
             await ctx.message.delete()
@@ -252,7 +258,8 @@ class MessagesCog(dcomm.Cog, name='Messages'):
 
     @dcomm.command(brief='Display a help message/rules/tutorial/useful note', description='Used to show a set of instructions, game rules, channel rules etc.\nLiterally any chunk of text you would like to store for later reference.')
     async def say(self, ctx, name:str):
-        results = dbFetch(name)
+        guild = ctx.message.guild.name
+        results = dbFetch(guild, name)
         if len(results) < 1:
             await ctx.send("Sorry I couldn't find %s" % (name))
             await ctx.message.delete()
@@ -268,6 +275,7 @@ class ActionsCog(dcomm.Cog, name='Actions'):
 
     @dcomm.command(brief='Restart the Among Us bot.', description='Restart the Among Us bot.')
     async def restart(self, ctx):
+        guild = ctx.message.guild.name
         if config['amongusbot'].replace(' ','') == '':
             await ctx.send("Could not find an Among Us bot configured")
             await ctx.message.delete()
@@ -292,7 +300,8 @@ class ScoreCog(dcomm.Cog, name='Score'):
 
     @dcomm.command(brief='Track players scores in Among Us.', description='Track players scores in Among Us.')
     async def scoreboard(self, ctx):
-        scores = scoreBoardGet()
+        guild = ctx.message.guild.name
+        scores = scoreBoardGet(guild)
         if len(scores) < 1:
             await ctx.send("No scores yet!")
             await ctx.message.delete()
@@ -308,12 +317,13 @@ class ScoreCog(dcomm.Cog, name='Score'):
 
     @dcomm.command(brief='Add player to scoreboard.', description='Add player to scoreboard.')
     async def addplayer(self, ctx, player:str):
-        x = scorePlayerGet(name)
+        guild = ctx.message.guild.name
+        x = scorePlayerGet(guild, name)
         if len (x) > 0:
             await ctx.send("Player %s that already esists" % (player))
             await ctx.message.delete()
             return
-        if scorePlayerAdd(name) == False:
+        if scorePlayerAdd(guild, name) == False:
             await ctx.send("Couldn't add player %s, sorry :cry:" % (player))
             await ctx.message.delete()
         await ctx.send("OK player %s added! :upside_down:" % (player))
@@ -322,6 +332,7 @@ class ScoreCog(dcomm.Cog, name='Score'):
 
     @dcomm.command(brief='Ammend a players score.', description='Ammend a players score.\nI.E\n\t.db scoreadd eggsy imp win\n\t.db scoreadd deïdra crew loss')
     async def scoreadd(self, ctx, player:str, role:str, action:str):
+        guild = ctx.message.guild.name
         if role not in [ 'crew', 'imp']:
             await ctx.send("Sorry only Crew (crew) and Imposter (imp) roles can be tracked")
             await ctx.message.delete()
@@ -330,7 +341,7 @@ class ScoreCog(dcomm.Cog, name='Score'):
             await ctx.send("Please specify either a win or loss")
             await ctx.message.delete()
             return
-        curscore = scorePlayerGet(player)
+        curscore = scorePlayerGet(guild, player)
         if len(curscore) < 1:
             await ctx.send("%s has not yet been added" % (player))
             await ctx.message.delete()
@@ -340,7 +351,7 @@ class ScoreCog(dcomm.Cog, name='Score'):
         if role == 'crew':
             if action == 'win':
                 crewwin += 1
-                if scorePlayerAdjust(player,'crewwin', crewwin) == False:
+                if scorePlayerAdjust(guild, player,'crewwin', crewwin) == False:
                     await ctx.send("Sorry, that didn't work :cry:")
                     await ctx.message.delete()
                     return
@@ -349,7 +360,7 @@ class ScoreCog(dcomm.Cog, name='Score'):
                 return
             if action == 'loss':
                 crewloss += 1
-                if scorePlayerAdjust(player,'crewloss', crewloss) == False:
+                if scorePlayerAdjust(guild, player,'crewloss', crewloss) == False:
                     await ctx.send("Sorry, that didn't work :cry:")
                     await ctx.message.delete()
                     return
@@ -359,7 +370,7 @@ class ScoreCog(dcomm.Cog, name='Score'):
         if role == 'imp':
             if action == 'win':
                 imposterwin += 1
-                if scorePlayerAdjust(player,'impwin', imposterwin) == False:
+                if scorePlayerAdjust(guild, player,'impwin', imposterwin) == False:
                     await ctx.send("Sorry, that didn't work :cry:")
                     await ctx.message.delete()
                     return
@@ -368,7 +379,7 @@ class ScoreCog(dcomm.Cog, name='Score'):
                 return
             if action == 'loss':
                 imposterloss += 1
-                if scorePlayerAdjust(player,'imploss', imposterloss) == False:
+                if scorePlayerAdjust(guild, player,'imploss', imposterloss) == False:
                     await ctx.send("Sorry, that didn't work :cry:")
                     await ctx.message.delete()
                     return
