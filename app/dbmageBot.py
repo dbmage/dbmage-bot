@@ -133,7 +133,7 @@ def scoreBoardGet(guild):
         return []
     scoreboard = {}
     for i in o:
-        scoreboard[i[0]] = scorePlayerGet(i[0])
+        scoreboard[i[0]] = scorePlayerGet(guild, i[0])
     return scoreboard
 
 def getContainers(dclient):
