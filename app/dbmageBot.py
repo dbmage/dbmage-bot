@@ -29,7 +29,7 @@ if getenv('DB') != None:
     DB = getenv('DB')
 else:
     if not path.exists('/'.join(DB.split('/')[:-1])):
-        print("Unable to create DB: %s" % (e))
+        print("Unable to create DB: %s does not exist" % ('/'.join(DB.split('/')[:-1])))
         sys.exit(1)
 
 description = 'DBMages helper bot'
@@ -251,9 +251,9 @@ class MessagesCog(dcomm.Cog, name='Messages'):
             await ctx.send('Nothing stored :frowning:')
             await ctx.message.delete()
             return
-        output = 'Stored messages:\n'
+        output = '**Stored messages**:\n'
         for row in data:
-            output += "%s\n" % (row[0])
+            output += "# *%s*\n" % (row[0])
         await ctx.send(output)
         await ctx.message.delete()
         return
