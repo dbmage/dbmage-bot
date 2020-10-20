@@ -1,0 +1,4 @@
+docker
+discord
+sqlite3
+
