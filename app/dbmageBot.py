@@ -28,16 +28,9 @@ DB = '/app/db/bot.db'
 if getenv('DB') != None:
     DB = getenv('DB')
 else:
-    if not path.exists('/'.join(db.split('/')[:-1])):
+    if not path.exists('/'.join(DB.split('/')[:-1])):
         print("Unable to create DB: %s" % (e))
         sys.exit(1)
-
-    if not path.exists(DB):
-        try:
-            copyfile('/app/bot.db', DB)
-        except Exception as e:
-            print("Unable to create DB: %s" % (e))
-            sys.exit(1)
 
 description = 'DBMages helper bot'
 ##Normal functions
