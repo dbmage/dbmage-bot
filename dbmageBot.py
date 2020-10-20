@@ -329,12 +329,12 @@ class ScoreCog(dcomm.Cog, name='Score'):
     @dcomm.command(brief='Add player to scoreboard.', description='Add player to scoreboard.')
     async def addplayer(self, ctx, player:str):
         guild = ctx.message.guild.name
-        x = scorePlayerGet(guild, name)
+        x = scorePlayerGet(guild, player)
         if len (x) > 0:
             await ctx.send("Player %s that already esists" % (player))
             await ctx.message.delete()
             return
-        if scorePlayerAdd(guild, name) == False:
+        if scorePlayerAdd(guild, player) == False:
             await ctx.send("Couldn't add player %s, sorry :cry:" % (player))
             await ctx.message.delete()
         await ctx.send("OK player %s added! :upside_down:" % (player))
