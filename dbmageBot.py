@@ -29,7 +29,7 @@ if getenv('DB') != None:
     DB = getenv('DB')
 else:
     if not path.exists('/'.join(DB.split('/')[:-1])):
-        print("Unable to create DB: %s" % (e))
+        print("Unable to create DB: %s does not exist" % ('/'.join(DB.split('/')[:-1])))
         sys.exit(1)
 
 description = 'DBMages helper bot'
