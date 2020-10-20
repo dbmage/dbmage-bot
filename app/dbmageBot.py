@@ -304,6 +304,16 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         await ctx.message.delete()
         return True
 
+    @dcomm.command(brief='Update the bots code.', hidden=True)
+    async def update(self, ctx):
+        msgauth = str(ctx.message.author)
+        if msgauth != 'DBMage#5637':
+            await ctx.message.delete()
+            return
+        system('cd /app/ && git pull')
+        await ctx.message.delete()
+        return
+
 class ScoreCog(dcomm.Cog, name='Score'):
 
     def __init__(self, bot):
