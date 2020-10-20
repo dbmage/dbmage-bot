@@ -47,7 +47,7 @@ def dbAdd(dbkey, dbvalue):
         cursor.execute('INSERT INTO dbbot VALUES (?,?)', (dbkey, dbvalue))
         conn.commit()
     except Exception as e:
-        print("Unable add %s-%s: %s" (dbkey, dbvalue, e))
+        print("Unable add %s-%s: %s" % (dbkey, dbvalue, e))
         return False
     return
 
@@ -58,7 +58,7 @@ def dbRem(dbkey):
         cursor.execute('DELETE FROM dbbot WHERE dbkey=?', (dbkey,))
         conn.commit()
     except Exception as e:
-        print("Unable remove data with key %s: %s" (dbkey, e))
+        print("Unable remove data with key %s: %s" % (dbkey, e))
         return False
     return True
 
@@ -88,6 +88,23 @@ def getContainers(dclient):
 
 ## Bot definitions
 dbbot = dcomm.Bot(command_prefix='.db ', description=description)
+
+@dbbot.event
+async def on_command_error(self, ctx, error):
+    await ctx.message.delete()
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send("Sorry %s, I do not recognise that command :confused: Use `.db help` to find out more about my available commands :slight_smile:")
+        return
+    if isinstance(error, commands.BotMissingPermissions):
+        await ctx.send("Sorry %s, I do not have permissions to do that :frowning:")
+        return
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("Sorry %s, you do not have permissions to do that :frowning:")
+        return
+    if isinstance(error, commands.UserInputError):
+        await ctx.send("Sorry %s, that command isn't quite right :slight_smile:, but no worries, use `.db help` to find out more about my available commands")
+        return
+    return
 
 @dbbot.event
 async def on_ready():
@@ -169,6 +186,17 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         cont.restart()
         dclient.close()
         return True
+
+class SpeechCog(dcomm.Cog, name='Speech'):
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    @dcomm.command(brief='Say hi to the bot.', description='Say hi to the bot.')
+    async def hi(self, ctx):
+        await ctx.message.delete()
+        await ctx.send("Hi there %s :smile: :wave:" % ("%s%s" % (ctx.message.author[0].upper(),ctx.message.author[1:])))
+        return
 
 class HelpCog(dcomm.Cog, name=' Help'):
 
