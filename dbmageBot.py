@@ -251,9 +251,9 @@ class MessagesCog(dcomm.Cog, name='Messages'):
             await ctx.send('Nothing stored :frowning:')
             await ctx.message.delete()
             return
-        output = 'Stored messages:\n'
+        output = '**Stored messages**:\n'
         for row in data:
-            output += "%s\n" % (row[0])
+            output += "# *%s*\n" % (row[0])
         await ctx.send(output)
         await ctx.message.delete()
         return
