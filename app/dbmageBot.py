@@ -3,10 +3,11 @@ import sys
 import docker
 import discord
 import sqlite3
-from os import path,getenv
 from time import sleep
-from discord.ext import commands as dcomm
+from os import path,getenv
+from shutil import copyfile
 from json import loads as jloads
+from discord.ext import commands as dcomm
 
 currentdir = path.dirname(path.abspath(__file__))
 config = jloads(open("%s/config.json" % (currentdir)).read())
@@ -23,13 +24,20 @@ for thing in ['token', 'amongusbot']:
         else:
             config[thing] = getenv(thing.upper())
 
+if path.exists('/app/db/') and not path.exists('/app/db/bot.db'):
+    try:
+        copyfile('/app/bot.db', '/app/db/bot.db')
+    except Exception as e:
+        print("Unable to create DB: %s" % (e))
+        sys.exit(1)
+
 description = 'DBMages helper bot'
 ##Normal functions
 def dbConn():
     done = False
     while not done:
         try:
-            conn = sqlite3.connect('bot.db')
+            conn = sqlite3.connect('bot/bot.db')
             cursor = conn.cursor()
             cursor.execute('create table if not exists dbbot (dbkey TEXT, dbvalue TEXT)')
             conn.commit()
