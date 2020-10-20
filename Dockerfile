@@ -1,5 +1,5 @@
 FROM python:3
-ADD app/* /app/
+RUN git clone https://github.com/dbmage/dbmage-bot.git --single-branch --branch=update /app/
 ADD requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt &&\
 rm /tmp/requirements.txt
