@@ -276,6 +276,15 @@ class ActionsCog(dcomm.Cog, name='Actions'):
     @dcomm.command(brief='Restart the Among Us bot.', description='Restart the Among Us bot.')
     async def restart(self, ctx):
         guild = ctx.message.guild.name
+        aubot = None
+        for i in config['amongusbot'].split(','):
+            if i.split('-')[-1] not in guild:
+                continue
+            aubot = i.split('-')[-1]
+        if aubot == None:
+            await ctx.send("Could not find an Among Us bot connected to your server")
+            await ctx.message.delete()
+            return
         if config['amongusbot'].replace(' ','') == '':
             await ctx.send("Could not find an Among Us bot configured")
             await ctx.message.delete()
