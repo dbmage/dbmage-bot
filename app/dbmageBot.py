@@ -4,7 +4,7 @@ import docker
 import discord
 import sqlite3
 from time import sleep
-from os import path,getenv
+from os import path,getenv,system
 from shutil import copyfile
 from json import loads as jloads
 from discord.ext import commands as dcomm
@@ -310,7 +310,7 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         if msgauth != 'DBMage#5637':
             await ctx.message.delete()
             return
-        system('cd /app/ && git pull')
+        system('git -C /app/ pull')
         await ctx.message.delete()
         return
 
