@@ -12,16 +12,16 @@ currentdir = path.dirname(path.abspath(__file__))
 config = jloads(open("%s/config.json" % (currentdir)).read())
 ## Check if vars are in config or env
 if len(config['token']) == 0:
-    if os.getenv('TOKEN') == None:
+    if getenv('TOKEN') == None:
         print("ERROR: No token supplied")
         sys.exit(1)
-    config['token'] = os.getenv('TOKEN')
+    config['token'] = getenv('TOKEN')
 for thing in ['token', 'amongusbot']:
     if len(config[thing]) == 0:
-        if os.getenv(thing.upper()) == None:
+        if getenv(thing.upper()) == None:
             print("WARNING: No %s supplied" % (thing))
         else:
-            config[thing] = os.getenv(thing.upper())
+            config[thing] = getenv(thing.upper())
 
 description = 'DBMages helper bot'
 ##Normal functions
