@@ -4,7 +4,7 @@ import docker
 import discord
 import sqlite3
 from time import sleep
-from os import path,getenv
+from os import path,getenv,system
 from shutil import copyfile
 from json import loads as jloads
 from discord.ext import commands as dcomm
@@ -303,6 +303,16 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         dclient.close()
         await ctx.message.delete()
         return True
+
+    @dcomm.command(brief='Update the bots code.', hidden=True)
+    async def update(self, ctx):
+        msgauth = str(ctx.message.author)
+        if msgauth != 'DBMage#5637':
+            await ctx.message.delete()
+            return
+        system('git -C /app/ pull')
+        await ctx.message.delete()
+        return
 
 class ScoreCog(dcomm.Cog, name='Score'):
 
