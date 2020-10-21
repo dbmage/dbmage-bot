@@ -7,6 +7,7 @@ from time import sleep
 from os import path,getenv,system
 from shutil import copyfile
 from json import loads as jloads
+from subprocess import Popen, PIPE
 from discord.ext import commands as dcomm
 
 currentdir = path.dirname(path.abspath(__file__))
@@ -426,6 +427,14 @@ class HelpCog(dcomm.Cog, name=' Help'):
 
     def __init__(self, bot):
         self.bot = bot
+
+    @dcomm.command(brief='Info about the bot.', description='Info about the bot.')
+    async def about(self, ctx):
+        version = Popen("git -C /app/ rev-parse --short HEAD"), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
+        uptime = Popen('uptime -p', shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8').replace('up ','')
+        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-40s\nUptime: %-40s`" % (version, uptime))
+        await ctx.message.delete()
+        return
 
 dbbot.add_cog(MessagesCog(dbbot))
 dbbot.add_cog(ActionsCog(dbbot))
