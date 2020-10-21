@@ -5,6 +5,7 @@ import discord
 import sqlite3
 from time import sleep
 from shutil import copyfile
+from asyncio import coroutine
 from datetime import datetime
 from json import loads as jloads
 from os import path,getenv,system
@@ -13,6 +14,7 @@ from discord.ext import commands as dcomm
 
 currentdir = path.dirname(path.abspath(__file__))
 config = jloads(open("%s/config.json" % (currentdir)).read())
+
 ## Check if vars are in config or env
 if len(config['token']) == 0:
     if getenv('TOKEN') == None:
@@ -35,6 +37,8 @@ else:
         sys.exit(1)
 
 description = 'DBMages helper bot'
+dbbot = dcomm.Bot(command_prefix='.db ', description=description)
+
 ##Normal functions
 def dbConn():
     done = False
@@ -138,6 +142,17 @@ def scoreBoardGet(guild):
         scoreboard[i[0]] = scorePlayerGet(guild, i[0])
     return scoreboard
 
+def scoreboardCreate(guild):
+    scores = scoreBoardGet(guild)
+    if len(scores) < 1:
+        return False
+    output = "`%s\n%s\n| %s | %s | %s |\n| %s | %s | %s | %s | %s |\n" % ('Scoreboard'.center(53),'#'*53, 'Player'.center(13), 'Crewmate'.center(15), 'Imposter'.center(15), ' '*13, 'Wins'.center(6), 'Losses', 'Wins'.center(6), 'Losses')
+    for player in scores:
+        cwin,closs,iwin,iloss = scores[player]
+        output += "| %s | %s | %s | %s | %s |\n" % (player.center(13), str(cwin).center(6), str(closs).center(6), str(iwin).center(6), str(iloss).center(6))
+    output += "%s`" % ('#'*53)
+    return output
+
 def getContainers(dclient):
     containers = {}
     for x in dclient.containers.list():
@@ -145,39 +160,51 @@ def getContainers(dclient):
     return containers
 
 ## Bot definitions
-dbbot = dcomm.Bot(command_prefix='.db ', description=description)
+## Single command for responding and removing command message
+@coroutine
+async def respond(ctx,message,reply):
+    await ctx.send(reply)
+    await message.delete()
+    return
 
+## Error catching
 @dbbot.event
 async def on_command_error(ctx, error):
     msgauth = ctx.message.author.name
     if isinstance(error, dcomm.CommandNotFound):
-        await ctx.send("Sorry %s, I do not recognise that command :confused: Use `.db help` to find out more about my available commands :slight_smile:" % (msgauth))
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, "Sorry %s, I do not recognise that command :confused: Use `.db help` to find out more about my available commands :slight_smile:" % (msgauth))
         return
     if isinstance(error, dcomm.BotMissingPermissions):
-        await ctx.send("Sorry %s, I do not have permissions to do that :frowning:" % (msgauth))
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, "Sorry %s, I do not have permissions to do that :frowning:" % (msgauth))
         return
     if isinstance(error, dcomm.MissingPermissions):
-        await ctx.send("Sorry %s, you do not have permissions to do that :frowning:" % (msgauth))
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, "Sorry %s, you do not have permissions to do that :frowning:" % (msgauth))
         return
     if isinstance(error, dcomm.UserInputError):
-        await ctx.send("Sorry %s, that command isn't quite right :slight_smile:, but no worries, use `.db help` to find out more about my available commands" % (msgauth))
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, "Sorry %s, that command isn't quite right :slight_smile:, but no worries, use `.db help` to find out more about my available commands" % (msgauth))
         return
     print("Error occured: %s" % (error))
     return
 
+## Confirm started
 @dbbot.event
 async def on_ready():
     print("%s has connected to Discord!" % (dbbot.user))
 
+## process non commands
 @dbbot.event
-async def on_member_join(member):
-    if 'eggsy' not in ctx.message.guild.name.lower():
+async def on_message(message):
+    if message.author == dbbot.user:
         return
-    await ctx.send("Hi %s, welcome to the server!\nYou can use .db help to find out more info" % (member.name))
+    if message.author.name == 'amongus-bot-eggsy' and message.embeds[0].title.lower() == 'lobby is open!':
+        board = scoreboardCreate(message.guild.name)
+        if board == False:
+            await message.channel.send("No scores yet!")
+            return
+        await message.channel.send(board)
+        return True
+    #print("%s:\n\tContent: %s\n\tEmbeds:%s\n\tWebhook: %s\n\tAttachments: %s" % (message.author, message.content, message.embeds[0].title, message.webhook_id, message.attachments))
+    await dbbot.process_commands(message)
     return
 
 class MessagesCog(dcomm.Cog, name='Messages'):
@@ -191,11 +218,9 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         toremove = len("%s %s %s " % (ctx.prefix, ctx.command, name))-1
         message = ctx.message.content[toremove:]
         if dbAdd(guild, name, message) == False:
-            await ctx.send("Sorry that didn't work :cry:")
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry that didn't work :cry:")
             return
-        await ctx.send('OK Done :slight_smile:')
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, 'OK Done :slight_smile:')
         return
 
     @dcomm.command(brief='Delete a help message/rules/tutorial/useful note (Requires admin priv)', description='Delete one of the messages that have been stored. You will need admin privs for that.')
@@ -205,20 +230,16 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         if "admin" in [y.name.lower() for y in ctx.message.author.roles]:
             admin = True
         if admin == False:
-            await ctx.send("Sorry %s, you do not have permission to do that :frowning:" % (ctx.message.author.name))
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry %s, you do not have permission to do that :frowning:" % (ctx.message.author.name))
             return
         results = dbFetch(guild,name)
         if len(results) < 1:
-            await ctx.send("Sorry I couldn't find %s" % (name))
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry I couldn't find %s" % (name))
             return
         if dbRem(guild, name) == False:
-            await ctx.send("Sorry that didn't work :cry:")
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry that didn't work :cry:")
             return
-        await ctx.send('OK Done :slight_smile:')
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, 'OK Done :slight_smile:')
         return
 
     @dcomm.command(brief='Add to a message/rules/tutorial/useful note', description='Add to a message, set of game rules, channel rules, server rules etc.')
@@ -228,21 +249,17 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         message = ctx.message.content[toremove:]
         results = dbFetch(guild, name)
         if len(results) < 1:
-            await ctx.send("Sorry I couldn't find %s" % (name))
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry I couldn't find %s" % (name))
             return
         curmsg = results[1]
         if dbRem(guild,name) == False:
-            await ctx.send("Sorry that didn't work :cry:")
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry that didn't work :cry:")
             return
         newmessage = "%s\n%s" % (curmsg, message)
         if dbAdd(guild, name, newmessage) == False:
-            await ctx.send("Sorry that didn't work :cry:")
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry that didn't work :cry:")
             return
-        await ctx.send('OK Done :slight_smile:')
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, 'OK Done :slight_smile:')
         return
 
     @dcomm.command(brief='List stored messages', description='List stored messages')
@@ -250,14 +267,12 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         guild = ctx.message.guild.name
         data = dbFetchAll(guild)
         if len(data) < 1:
-            await ctx.send('Nothing stored :frowning:')
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, 'Nothing stored :frowning:')
             return
         output = '**Stored messages**:\n'
         for row in data:
             output += "- *%s*\n" % (row[0])
-        await ctx.send(output)
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, output)
         return
 
     @dcomm.command(brief='Display a help message/rules/tutorial/useful note', description='Used to show a set of instructions, game rules, channel rules etc.\nLiterally any chunk of text you would like to store for later reference.')
@@ -265,11 +280,9 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         guild = ctx.message.guild.name
         results = dbFetch(guild, name)
         if len(results) < 1:
-            await ctx.send("Sorry I couldn't find %s" % (name))
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Sorry I couldn't find %s" % (name))
             return
-        await ctx.send("%s\n\n%s" % (results[0].upper(),results[1]))
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, "%s\n\n%s" % (results[0].upper(),results[1]))
         return
 
 class ActionsCog(dcomm.Cog, name='Actions'):
@@ -286,19 +299,16 @@ class ActionsCog(dcomm.Cog, name='Actions'):
                 continue
             aubot = i
         if aubot == None:
-            await ctx.send("Could not find an Among Us bot connected to your server")
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Could not find an Among Us bot connected to your server")
             return
         if config['amongusbot'].replace(' ','') == '':
-            await ctx.send("Could not find an Among Us bot configured")
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Could not find an Among Us bot configured")
             return
         dclient = docker.from_env()
         containers = getContainers(dclient)
         if aubot not in containers:
             dclient.close()
-            await ctx.send("Could not find an Among Us bot connected to your server")
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Could not find an Among Us bot connected to your server")
             return
         cont = containers[config[aubot]]
         cont.restart()
@@ -323,19 +333,11 @@ class ScoreCog(dcomm.Cog, name='Score'):
 
     @dcomm.command(brief='Track players scores in Among Us.', description='Track players scores in Among Us.')
     async def scoreboard(self, ctx):
-        guild = ctx.message.guild.name
-        scores = scoreBoardGet(guild)
-        if len(scores) < 1:
-            await ctx.send("No scores yet!")
-            await ctx.message.delete()
+        board = scoreboardCreate(ctx.message.guild.name)
+        if board == False:
+            await respond("No scores yet!")
             return
-        output = "`%s\n%s\n| %s | %s | %s |\n| %s | %s | %s | %s | %s |\n" % ('Scoreboard'.center(53),'#'*53, 'Player'.center(13), 'Crewmate'.center(15), 'Imposter'.center(15), ' '*13, 'Wins'.center(6), 'Losses', 'Wins'.center(6), 'Losses')
-        for player in scores:
-            cwin,closs,iwin,iloss = scores[player]
-            output += "| %s | %s | %s | %s | %s |\n" % (player.center(13), str(cwin).center(6), str(closs).center(6), str(iwin).center(6), str(iloss).center(6))
-        output += "%s`" % ('#'*53)
-        await ctx.send(output)
-        await ctx.message.delete()
+        await message.channel.send(board)
         return True
 
     @dcomm.command(brief='Add player to scoreboard.', description='Add player to scoreboard.')
@@ -343,31 +345,25 @@ class ScoreCog(dcomm.Cog, name='Score'):
         guild = ctx.message.guild.name
         x = scorePlayerGet(guild, player)
         if len (x) > 0:
-            await ctx.send("Player %s that already esists" % (player))
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "Player %s that already esists" % (player))
             return
         if scorePlayerAdd(guild, player) == False:
-            await ctx.send("Couldn't add player %s, sorry :cry:" % (player))
-            await ctx.message.delete()
-        await ctx.send("OK player %s added! :upside_down:" % (player))
-        await ctx.message.delete()
+            await respond(ctx, ctx.message, "Couldn't add player %s, sorry :cry:" % (player))
+        await respond(ctx, ctx.message, "OK player %s added! :upside_down:" % (player))
         return True
 
     @dcomm.command(brief='Ammend a players score.', description='Ammend a players score.\nI.E\n\t.db scoreadd eggsy imp win\n\t.db scoreadd deïdra crew loss')
     async def scoreadd(self, ctx, player:str, role:str, action:str):
         guild = ctx.message.guild.name
-        if role not in [ 'crew', 'imp']:
-            await ctx.send("Sorry only Crew (crew) and Imposter (imp) roles can be tracked")
-            await ctx.message.delete()
+        if role not in [ 'crew', 'imp' ]:
+            await respond(ctx, ctx.message, "Sorry only Crew (crew) and Imposter (imp) roles can be tracked")
             return
-        if action not in [ 'win', 'loss']:
-            await ctx.send("Please specify either a win or loss")
-            await ctx.message.delete()
+        if action not in [ 'win', 'loss' ]:
+            await respond(ctx, ctx.message, "Please specify either a win or loss")
             return
         curscore = scorePlayerGet(guild, player)
         if len(curscore) < 1:
-            await ctx.send("%s has not yet been added" % (player))
-            await ctx.message.delete()
+            await respond(ctx, ctx.message, "%s has not yet been added" % (player))
             return
         crewwin,crewloss,imposterwin,imposterloss = curscore
         #crewwin  crewloss  impwin  imploss
@@ -375,39 +371,31 @@ class ScoreCog(dcomm.Cog, name='Score'):
             if action == 'win':
                 crewwin += 1
                 if scorePlayerAdjust(guild, player,'crewwin', crewwin) == False:
-                    await ctx.send("Sorry, that didn't work :cry:")
-                    await ctx.message.delete()
+                    await respond(ctx, ctx.message, "Sorry, that didn't work :cry:")
                     return
-                await ctx.send("%s updated! :angel:" % (player))
-                await ctx.message.delete()
+                await respond(ctx, ctx.message, "%s updated! :angel:" % (player))
                 return
             if action == 'loss':
                 crewloss += 1
                 if scorePlayerAdjust(guild, player,'crewloss', crewloss) == False:
-                    await ctx.send("Sorry, that didn't work :cry:")
-                    await ctx.message.delete()
+                    await respond(ctx, ctx.message, "Sorry, that didn't work :cry:")
                     return
-                await ctx.send("%s updated! :dizzy_face:" % (player))
-                await ctx.message.delete()
+                await respond(ctx, ctx.message, "%s updated! :dizzy_face:" % (player))
                 return
         if role == 'imp':
             if action == 'win':
                 imposterwin += 1
                 if scorePlayerAdjust(guild, player,'impwin', imposterwin) == False:
-                    await ctx.send("Sorry, that didn't work :cry:")
-                    await ctx.message.delete()
+                    await respond(ctx, ctx.message, "Sorry, that didn't work :cry:")
                     return
-                await ctx.send("%s updated! :smiling_imp:" % (player))
-                await ctx.message.delete()
+                await respond(ctx, ctx.message, "%s updated! :smiling_imp:" % (player))
                 return
             if action == 'loss':
                 imposterloss += 1
                 if scorePlayerAdjust(guild, player,'imploss', imposterloss) == False:
-                    await ctx.send("Sorry, that didn't work :cry:")
-                    await ctx.message.delete()
+                    await respond(ctx, ctx.message, "Sorry, that didn't work :cry:")
                     return
-                await ctx.send("%s updated! :imp:" % (player))
-                await ctx.message.delete()
+                await respond(ctx, ctx.message, "%s updated! :imp:" % (player))
                 return
         await ctx.message.delete()
         return True
@@ -420,8 +408,7 @@ class SpeechCog(dcomm.Cog, name='Speech'):
     @dcomm.command(brief='Say hi to the bot.', description='Say hi to the bot.')
     async def hi(self, ctx):
         msgauthor = str(ctx.message.author.name)
-        await ctx.send("Hi there %s :smile: :wave:" % ("%s%s" % (msgauthor[0].upper(),msgauthor[1:])))
-        await ctx.message.delete()
+        await respond(ctx, ctx.message, "Hi there %s :smile: :wave:" % ("%s%s" % (msgauthor[0].upper(),msgauthor[1:])))
         return
 
 class HelpCog(dcomm.Cog, name=' Help'):
@@ -436,20 +423,22 @@ class HelpCog(dcomm.Cog, name=' Help'):
         containers = getContainers(dclient)
         cont = containers['dbmage-bot']
         uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
-        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-20s\nUptime : %-20s`" % (version, uptime))
-        await ctx.message.delete()
+        await respond(ctx,message,"DBMage Bot :slight_smile:\n`Version: %-20s\nUptime : %-20s`" % (version, uptime))
         return
 
+## Add groups to bot
 dbbot.add_cog(MessagesCog(dbbot))
 dbbot.add_cog(ActionsCog(dbbot))
 dbbot.add_cog(SpeechCog(dbbot))
 dbbot.add_cog(ScoreCog(dbbot))
 dbbot.add_cog(HelpCog(dbbot))
 
+## Created for help, to remove command message from user
 async def removeCall(ctx):
     try:
         await ctx.message.delete()
     except:
+        ## it removes the message, but causes an error about the mssage not existing
         pass
     return True
 
