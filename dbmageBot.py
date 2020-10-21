@@ -422,9 +422,9 @@ class HelpCog(dcomm.Cog, name=' Help'):
             containers = getContainers(dclient)
             cont = containers['dbmage-bot']
             uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
+            await respond(ctx, ctx.message,"DBMage Bot :slight_smile:\n`Version: %-20s\nUptime : %-20s`" % (version, uptime))
         except Exception as e:
             print("Error: %s" % (e))
-        await respond(ctx,message,"DBMage Bot :slight_smile:\n`Version: %-20s\nUptime : %-20s`" % (version, uptime))
         return
 
 ## Add groups to bot
@@ -451,3 +451,5 @@ try:
     dbbot.run(config['token'])
 except KeyboardInterrupt:
     sys.exit(1)
+except Exception as e:
+    print("Error starting bot: %s" % (e))
