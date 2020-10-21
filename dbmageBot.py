@@ -206,7 +206,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
             await ctx.send("Sorry %s, you do not have permission to do that :frowning:" % (ctx.message.author.name))
             await ctx.message.delete()
             return
-        results = dbFetch(name)
+        results = dbFetch(guild,name)
         if len(results) < 1:
             await ctx.send("Sorry I couldn't find %s" % (name))
             await ctx.message.delete()
