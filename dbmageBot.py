@@ -5,7 +5,6 @@ import discord
 import sqlite3
 from time import sleep
 from shutil import copyfile
-from asyncio import coroutine
 from datetime import datetime
 from json import loads as jloads
 from os import path,getenv,system
@@ -161,7 +160,6 @@ def getContainers(dclient):
 
 ## Bot definitions
 ## Single command for responding and removing command message
-#@coroutine
 async def respond(ctx,message,reply):
     await ctx.send(reply)
     await message.delete()
