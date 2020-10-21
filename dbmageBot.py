@@ -3,11 +3,11 @@ import sys
 import docker
 import discord
 import sqlite3
-from re import sub
 from time import sleep
-from os import path,getenv,system
 from shutil import copyfile
+from datetime import datetime
 from json import loads as jloads
+from os import path,getenv,system
 from subprocess import Popen, PIPE
 from discord.ext import commands as dcomm
 
@@ -433,8 +433,11 @@ class HelpCog(dcomm.Cog, name=' Help'):
     @dcomm.command(brief='Info about the bot.', description='Info about the bot.')
     async def about(self, ctx):
         version = Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
-        uptime = sub(r'\s{2,}', ',', Popen('docker ps | grep dbmage-bot', shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')).split(',')[4].lower().replace('up ','')
-        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-10s\nUptime : %-10s`" % (version, uptime))
+        dclient = docker.from_env()
+        containers = getContainers(dclient)
+        cont = containers['dbmage-bot']
+        uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
+        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-20s\nUptime : %-20s`" % (version, uptime))
         await ctx.message.delete()
         return
 
