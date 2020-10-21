@@ -432,7 +432,7 @@ class HelpCog(dcomm.Cog, name=' Help'):
     async def about(self, ctx):
         version = Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
         uptime = Popen('uptime -p', shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8').replace('up ','')
-        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-40s\nUptime: %-40s`" % (version, uptime))
+        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-40s\nUptime : %-40s`" % (version, uptime))
         await ctx.message.delete()
         return
 
