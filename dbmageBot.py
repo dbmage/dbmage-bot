@@ -161,7 +161,7 @@ def getContainers(dclient):
 
 ## Bot definitions
 ## Single command for responding and removing command message
-@coroutine
+#@coroutine
 async def respond(ctx,message,reply):
     await ctx.send(reply)
     await message.delete()
