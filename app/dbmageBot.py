@@ -3,6 +3,7 @@ import sys
 import docker
 import discord
 import sqlite3
+from re import sub
 from time import sleep
 from os import path,getenv,system
 from shutil import copyfile
@@ -140,7 +141,7 @@ def scoreBoardGet(guild):
 def getContainers(dclient):
     containers = {}
     for x in dclient.containers.list():
-        continers[x.attrs['Name']] = x
+        containers[x.attrs['Name'].replace('/','')] = x
     return containers
 
 ## Bot definitions
@@ -283,7 +284,7 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         for i in config['amongusbot'].split(','):
             if i.split('-')[-1] not in guild:
                 continue
-            aubot = i.split('-')[-1]
+            aubot = i
         if aubot == None:
             await ctx.send("Could not find an Among Us bot connected to your server")
             await ctx.message.delete()
@@ -294,12 +295,12 @@ class ActionsCog(dcomm.Cog, name='Actions'):
             return
         dclient = docker.from_env()
         containers = getContainers(dclient)
-        if config['amongusbot'] not in containers:
+        if aubot not in containers:
             dclient.close()
             await ctx.send("Could not find an Among Us bot connected to your server")
             await ctx.message.delete()
             return
-        cont = containers[config['amongusbot']]
+        cont = containers[config[aubot]]
         cont.restart()
         dclient.close()
         await ctx.message.delete()
@@ -313,6 +314,7 @@ class ActionsCog(dcomm.Cog, name='Actions'):
             return
         system('git -C /app/ pull')
         await ctx.message.delete()
+        sys.exit(0)
         return
 
 class ScoreCog(dcomm.Cog, name='Score'):
@@ -431,8 +433,8 @@ class HelpCog(dcomm.Cog, name=' Help'):
     @dcomm.command(brief='Info about the bot.', description='Info about the bot.')
     async def about(self, ctx):
         version = Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
-        uptime = Popen('uptime -p', shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8').replace('up ','')
-        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-40s\nUptime : %-40s`" % (version, uptime))
+        uptime = sub(r'\s{2,}', ',', Popen('docker ps | grep dbmage-bot', shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')).split(',')[4].lower().replace('up ','')
+        await ctx.send("DBMage Bot :slight_smile:\n`Version: %-10s\nUptime : %-10s`" % (version, uptime))
         await ctx.message.delete()
         return
 
