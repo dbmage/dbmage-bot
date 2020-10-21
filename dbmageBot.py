@@ -416,11 +416,14 @@ class HelpCog(dcomm.Cog, name=' Help'):
 
     @dcomm.command(brief='Info about the bot.', description='Info about the bot.')
     async def about(self, ctx):
-        version = Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
-        dclient = docker.from_env()
-        containers = getContainers(dclient)
-        cont = containers['dbmage-bot']
-        uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
+        try:
+            version = Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
+            dclient = docker.from_env()
+            containers = getContainers(dclient)
+            cont = containers['dbmage-bot']
+            uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
+        except Exception as e:
+            print("Error: %s" % (e))
         await respond(ctx,message,"DBMage Bot :slight_smile:\n`Version: %-20s\nUptime : %-20s`" % (version, uptime))
         return
 
