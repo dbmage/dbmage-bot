@@ -314,7 +314,6 @@ class ActionsCog(dcomm.Cog, name='Actions'):
             return
         system('git -C /app/ pull')
         await ctx.message.delete()
-        await ctx.bot.logout()
         return
 
 class ScoreCog(dcomm.Cog, name='Score'):
