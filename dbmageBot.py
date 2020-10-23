@@ -158,6 +158,38 @@ def getContainers(dclient):
         containers[x.attrs['Name'].replace('/','')] = x
     return containers
 
+def getContainer(container):
+    dclient = docker.from_env()
+    conts = dclient.containers.list()
+    dclient.close()
+    for x in conts:
+        if x.attrs['Name'].replace('/','') == container:
+            return x
+    return None
+
+def getAuPort(container):
+    env = container.attrs['Config']['Env']
+    for var in env:
+        if 'SERVER_PORT' in var:
+            return var.split('=')[-1]
+    return None
+
+def getServerBotContainer(guild):
+    if guild == 'Denham':
+        return 'amongusbot-eggsy'
+    for i in config['amongusbot'].split(','):
+        if i.split('-')[-1] not in guild:
+            continue
+        return i
+    return None
+
+def getContStatus(container):
+    status = container.attrs['State']['Status']
+    uptime = None
+    if status == 'running':
+        uptime = str(datetime.now() - datetime.strptime(''.join(container.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
+    return [status, uptime]
+
 ## Bot definitions
 ## Single command for responding and removing command message
 async def respond(ctx,message,reply):
@@ -283,6 +315,23 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         await respond(ctx, ctx.message, "%s\n\n%s" % (results[0].upper(),results[1]))
         return
 
+    @dcomm.command(brief='Display a Among Us bot status and details.', description='Display a Among Us bot status and details.')
+    async def aubot(self, ctx):
+        aubot = getServerBotContainer(ctx.message.guild.name)
+        if aubot == None:
+            await respond(ctx, ctx.message, "Could not find an Among Us bot connected to your server")
+            return
+        aubot = getContainer(aubot)
+        port = getAuPort(aubot)
+        status,uptime = getContStatus(aubot)
+        name = aubot.attrs['Name'].replace('/','')
+        status = "%s%s" % (status[0].upper(),status[1:])
+        if status != 'Running':
+            await respond(ctx, ctx.message, "AU Bot connection details\n`Name  : %-28s\nServer: %-28s\nStatus: %-28s`" % (name, "dbmage.co.uk:%s" % (port), status))
+        await respond(ctx, ctx.message, "AU Bot connection details\n`Name  : %-28s\nServer: %-28s\nStatus: %-28s`" % (name, "dbmage.co.uk:%s" % (port), "%s (%s)" % (status, uptime) ))
+        return
+
+
 class ActionsCog(dcomm.Cog, name='Actions'):
 
     def __init__(self, bot):
@@ -290,12 +339,7 @@ class ActionsCog(dcomm.Cog, name='Actions'):
 
     @dcomm.command(brief='Restart the Among Us bot.', description='Restart the Among Us bot.')
     async def restart(self, ctx):
-        guild = ctx.message.guild.name
-        aubot = None
-        for i in config['amongusbot'].split(','):
-            if i.split('-')[-1] not in guild:
-                continue
-            aubot = i
+        aubot = getServerBotContainer(ctx.message.guild.name)
         if aubot == None:
             await respond(ctx, ctx.message, "Could not find an Among Us bot connected to your server")
             return
