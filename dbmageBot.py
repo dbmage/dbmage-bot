@@ -5,7 +5,7 @@ import discord
 import sqlite3
 from time import sleep
 from shutil import copyfile
-from datetime import datetime
+from datetime import datetime,timedelta
 from json import loads as jloads
 from os import path,getenv,system
 from subprocess import Popen, PIPE
@@ -49,6 +49,8 @@ def dbConn():
             conn.commit()
             cursor.execute('create table if not exists auscores (guild TEXT, player TEXT, crewwin INT, crewloss INT, impwin INT, imploss INT)')
             conn.commit()
+            cursor.execute('create table if not exists botdata (prevver TEXT, curver TEXT, updated INT, requests INT)')
+            conn.commit()
             done = True
             return conn
         except sqlite3.OperationalError as e:
@@ -65,7 +67,9 @@ def dbAdd(guild, dbkey, dbvalue):
         conn.commit()
     except Exception as e:
         print("Unable add %s-%s: %s" % (dbkey, dbvalue, e))
+        conn.close()
         return False
+    conn.close()
     return
 
 def dbRem(guild, dbkey):
@@ -76,8 +80,64 @@ def dbRem(guild, dbkey):
         conn.commit()
     except Exception as e:
         print("Unable remove data with key %s: %s" % (dbkey, e))
+        conn.close()
         return False
+    conn.close()
     return True
+
+def botDbFetch():
+    conn = dbConn()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM botdata')
+    res = cursor.fetchone()
+    if res == None:
+        return res
+    output = list(res)
+    conn.close()
+    return output
+
+def botDbAdd(row):
+    conn = dbConn()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM botdata')
+        conn.commit()
+        cursor.execute('INSERT INTO botdata VALUES (?,?,?,?)', (row[0], row[1], row[2], row[3]))
+        conn.commit()
+    except Exception as e:
+        print("Unable update botdata: %s" % (e))
+        conn.close()
+        return False
+    conn.close()
+    return True
+
+def botDbUpdate(key, value):
+    data = botDbFetch()
+    if data == None:
+        data = []
+    keys = {
+        'prevver' : {
+            'key' : 0,
+            'base' : ''
+        },
+        'curver' : {
+            'key' : 1,
+            'base' : ''
+        },
+        'updated' : {
+            'key' : 2,
+            'base' : 0
+        },
+        'requests' : {
+            'key' : 3,
+            'base' : 0
+        }
+    }
+    for x in keys:
+        if len(data) < keys[x]['key'] + 1:
+            data.append(keys[x]['base'])
+    data[keys[key]['key']] = value
+    return botDbAdd(data)
 
 def dbFetch(guild, dbkey):
     conn = dbConn()
@@ -85,7 +145,9 @@ def dbFetch(guild, dbkey):
     cursor.execute('SELECT dbkey,dbvalue FROM dbbot WHERE dbkey=? AND guild=?', (dbkey,guild))
     o = cursor.fetchone()
     if o == None:
+        conn.close()
         return []
+    conn.close()
     return tuple(o)
 
 def dbFetchAll(guild):
@@ -94,7 +156,9 @@ def dbFetchAll(guild):
     cursor.execute('SELECT dbkey FROM dbbot WHERE guild=?', (guild,))
     o = cursor.fetchall()
     if o == None:
+        conn.close()
         return []
+    conn.close()
     return tuple(o)
 
 def scorePlayerAdd(guild, player):
@@ -105,8 +169,10 @@ def scorePlayerAdd(guild, player):
         conn.commit()
     except Exception as e:
         print("Unable add %s: %s" % (player, e))
+        conn.close()
         return False
-    return
+    conn.close()
+    return True
 
 def scorePlayerAdjust(guild, player,dbkey,dbvalue):
     conn = dbConn()
@@ -117,8 +183,10 @@ def scorePlayerAdjust(guild, player,dbkey,dbvalue):
         conn.commit()
     except Exception as e:
         print("Unable update %s %s: %s" % (player, dbkey, e))
+        conn.close()
         return False
-    return
+    conn.close()
+    return True
 
 def scorePlayerGet(guild, player):
     conn = dbConn()
@@ -126,7 +194,9 @@ def scorePlayerGet(guild, player):
     cursor.execute('SELECT crewwin, crewloss, impwin, imploss FROM auscores WHERE player=? AND guild=?', (player,guild))
     o = cursor.fetchone()
     if o == None:
+        conn.close()
         return []
+    conn.close()
     return tuple(o)
 
 def scoreBoardGet(guild):
@@ -134,6 +204,7 @@ def scoreBoardGet(guild):
     cursor = conn.cursor()
     cursor.execute('SELECT player FROM auscores WHERE guild=?', (guild,))
     o = cursor.fetchall()
+    conn.close()
     if o == None:
         return []
     scoreboard = {}
@@ -193,9 +264,14 @@ def getContStatus(container):
 ## Bot definitions
 ## Single command for responding and removing command message
 async def respond(ctx,message,reply):
-    await ctx.send(reply)
+    row = botDbFetch()
+    if row == None:
+        botDbUpdate('requests', 1)
+    else:
+        botDbUpdate('requests', row[3] + 1)
+    newmsg = await ctx.send(reply)
     await message.delete()
-    return
+    return newmsg
 
 ## Error catching
 @dbbot.event
@@ -229,11 +305,16 @@ async def on_message(message):
     if message.author.name == 'amongus-bot-eggsy' and message.embeds[0].title.lower() == 'lobby is open!':
         board = scoreboardCreate(message.guild.name)
         if board == False:
+            row = botDbFetch()
+            botDbUpdate('requests', row[3] + 1)
             await message.channel.send("No scores yet!")
             return
+        row = botDbFetch()
+        botDbUpdate('requests', row[3] + 1)
         await message.channel.send(board)
         return True
     #print("%s:\n\tContent: %s\n\tEmbeds:%s\n\tWebhook: %s\n\tAttachments: %s" % (message.author, message.content, message.embeds[0].title, message.webhook_id, message.attachments))
+    #print(', '.join([y.name.lower() for y in message.author.roles]))
     await dbbot.process_commands(message)
     return
 
@@ -365,6 +446,9 @@ class ActionsCog(dcomm.Cog, name='Actions'):
             await ctx.message.delete()
             return
         system('git -C /app/ pull')
+        botDbUpdate('prevver', Popen("git -C /app/ rev-parse --short HEAD~1", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+        botDbUpdate('updated', int(datetime.now().timestamp()))
+        botDbUpdate('curver', Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
         await ctx.message.delete()
         return
 
@@ -460,13 +544,37 @@ class HelpCog(dcomm.Cog, name=' Help'):
 
     @dcomm.command(brief='Info about the bot.', description='Info about the bot.')
     async def about(self, ctx):
+        global DB
+        print(1)
+        newmsg = await respond(ctx, ctx.message,"DBMage Bot :slight_smile:\ngetting data....")
+        print(1)
         try:
-            version = Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
+            data = botDbFetch()
+            if data == None:
+                botDbUpdate('updated', int(datetime.now().timestamp()))
+                gitdir = '/app/'
+                if 'app' not in DB:
+                    gitdir = '.'
+                botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+                botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+                data = botDbFetch()
+            curver, prevver, updated, requests = data
             dclient = docker.from_env()
             containers = getContainers(dclient)
             cont = containers['dbmage-bot']
             uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
-            await respond(ctx, ctx.message,"DBMage Bot :slight_smile:\n`Version: %-20s\nUptime : %-20s`" % (version, uptime))
+            await newmsg.edit(content=
+                "DBMage Bot :slight_smile:\n` %s `\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n` %s `" %
+                (
+                    '='*41,
+                    'Previous Version', prevver,
+                    'Current Version', curver,
+                    'Updated', updated,
+                    'Requests Processed', requests,
+                    'Uptime', uptime,
+                    '='*41
+                )
+            )
         except Exception as e:
             print("Error: %s" % (e))
         return
