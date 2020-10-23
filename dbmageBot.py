@@ -356,7 +356,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
     @dcomm.command(brief='Add to a message/rules/tutorial/useful note', description='Add to a message, set of game rules, channel rules, server rules etc.')
     async def append(self, ctx, name:str):
         guild = ctx.message.guild.name
-        toremove = len("%s %s %s " % (ctx.prefix, ctx.command, name))-1
+        toremove = len("%s %s %s " % (ctx.prefix, ctx.command, name))
         message = ctx.message.content[toremove:]
         results = dbFetch(guild, name)
         if len(results) < 1:
