@@ -567,22 +567,35 @@ class HelpCog(dcomm.Cog, name=' Help'):
         global DB
         print(1)
         newmsg = await respond(ctx, ctx.message,"DBMage Bot :slight_smile:\ngetting data....")
-        print(1)
+        print(2)
         try:
             data = botDbFetch()
+            print(3)
             if data == None:
+                print('a')
                 botDbUpdate('updated', int(datetime.now().timestamp()))
+                print('b')
                 gitdir = '/app/'
+                print('c')
                 if 'app' not in DB:
                     gitdir = '.'
+                print('d')
                 botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+                print('e')
                 botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+                print('f')
                 data = botDbFetch()
+                print('g')
             curver, prevver, updated, requests = data
+            print(4)
             dclient = docker.from_env()
+            print(5)
             containers = getContainers(dclient)
+            print(6)
             cont = containers['dbmage-bot']
+            print(7)
             uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
+            print(8)
             await newmsg.edit(content=
                 "DBMage Bot :slight_smile:\n` %s `\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n` %s `" %
                 (
@@ -595,6 +608,7 @@ class HelpCog(dcomm.Cog, name=' Help'):
                     '='*41
                 )
             )
+            print(9)
         except Exception as e:
             print("Error: %s" % (e))
         return
