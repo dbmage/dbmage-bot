@@ -302,7 +302,7 @@ async def on_ready():
 async def on_message(message):
     if message.author == dbbot.user:
         return
-    if message.author.name == 'amongus-bot-eggsy' and message.embeds[0].title.lower() == 'lobby is open!':
+    if message.author.name == 'amongus-bot-eggsy' and len(message.embeds) > 0 and message.embeds[0].title.lower() == 'lobby is open!':
         board = scoreboardCreate(message.guild.name)
         if board == False:
             row = botDbFetch()
