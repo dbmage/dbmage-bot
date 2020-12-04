@@ -310,6 +310,9 @@ async def on_message(message):
             await message.channel.send("No scores yet!")
             return
         row = botDbFetch()
+        if row == None:
+            await message.channel.send("Sorry that didn't work :cry:")
+            return False
         botDbUpdate('requests', row[3] + 1)
         await message.channel.send(board)
         return True
@@ -536,6 +539,23 @@ class SpeechCog(dcomm.Cog, name='Speech'):
         msgauthor = str(ctx.message.author.name)
         await respond(ctx, ctx.message, "Hi there %s :smile: :wave:" % ("%s%s" % (msgauthor[0].upper(),msgauthor[1:])))
         return
+
+class EventCog(dcomm.Cog, name='Events'):
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    @dcomm.command(brief='Create an event', description='Set a channel reminder or create an event for a later time and date.')
+    async def createevent(self, ctx):
+        return True
+
+    @dcomm.command(brief='List events', description='List events/reminders.')
+    async def listevents(self, ctx):
+        return True
+
+    @dcomm.command(brief='Delete an event', description='Remove an event/reminder.')
+    async def removeevent(self, ctx):
+        return True
 
 class HelpCog(dcomm.Cog, name=' Help'):
 
