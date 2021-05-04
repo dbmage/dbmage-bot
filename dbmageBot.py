@@ -462,8 +462,12 @@ class ActionsCog(dcomm.Cog, name='Actions'):
             await ctx.message.delete()
             return
         await ctx.message.delete()
-        botUpdate()
-
+        resp = botUpdate()
+        if resp == False:
+            return
+        await respond(ctx, ctx.message, resp)
+        return
+        
     @dcomm.command(brief='Delete messages from a channel', description='Delete the specified number of messages from the specified channel.')
     async def purge(self, ctx, messages: int):
         if checkPerms(ctx, 'admin') == False:
