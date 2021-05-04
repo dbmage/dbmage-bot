@@ -310,28 +310,26 @@ async def test():
         return False
     mrmage = await dbbot.fetch_user(382630692099457037)
     sent = 0
-    async for member in guild.fetch_members(limit=None):
-        if member.name.lower() in [ 'DBMageBot', 'Rythm']:
-            continue
-        skip = False
-        for role in member.roles:
-            if role.name.lower() in [ 'admin', 'sus', 'not sus', 'not so sus no more', 'bots']:
-                skip = True
-                break
-        if skip == True:
-            continue
-        message = "%s\n" % (member.name)
-        async for item in member.history(limit=None):
-            message += item
-        mydm = await mrmage.create_dm()
-        await mydm.send(message)
-        sent += 1
-        if sent == 10:
-            break
-    supersus = guild.get_role(766851739068006420)
-    prunage = await guild.estimate_pruned_members(7)
+    # async for member in guild.fetch_members(limit=None):
+    #     if member.name.lower() in [ 'DBMageBot', 'Rythm']:
+    #         continue
+    #     skip = False
+    #     for role in member.roles:
+    #         if role.name.lower() in [ 'admin', 'sus', 'not sus', 'not so sus no more', 'bots']:
+    #             skip = True
+    #             break
+    #     if skip == True:
+    #         continue
+    #     message = "%s\n" % (member.name)
+    message = ''
+    async for item in guild.history(limit=10):
+        message += "%s\n" % (item)
     mydm = await mrmage.create_dm()
-    await mydm.send(prunage)
+    await mydm.send(message)
+        # sent += 1
+        # if sent == 10:
+        #     break
+
     return
 
 ## Error catching
