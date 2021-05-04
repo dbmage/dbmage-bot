@@ -404,7 +404,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         if filename == fullfile:
             log.error("Unable to find %s" % (filename))
             await ctx.message.delete()
-        await respond(ctx, ctx.message, newmsg, myFile=discord.File(fullfile))
+        await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
         return
 
     @dcomm.command(brief='Display Polus map with vents', description='Display Polus map with vents')
@@ -414,7 +414,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         if filename == fullfile:
             log.error("Unable to find %s" % (filename))
             await ctx.message.delete()
-        await respond(ctx, ctx.message, newmsg, myFile=discord.File(fullfile))
+        await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
         return
 
     @dcomm.command(brief='Display Polus map with vents', description='Display Polus map with vents')
@@ -424,7 +424,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         if filename == fullfile:
             log.error("Unable to find %s" % (filename))
             await ctx.message.delete()
-        await respond(ctx, ctx.message, newmsg, myFile=discord.File(fullfile))
+        await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
         return
 
 class ActionsCog(dcomm.Cog, name='Actions'):
