@@ -496,6 +496,7 @@ class HelpCog(dcomm.Cog, name=' Help'):
     @dcomm.command(brief='Info about the bot.', description='Info about the bot.')
     async def about(self, ctx):
         global DB
+        global starttime
         newmsg = await respond(ctx, ctx.message,"DBMage Bot :slight_smile:\ngetting data....")
         try:
             data = botDbFetch()
@@ -508,10 +509,7 @@ class HelpCog(dcomm.Cog, name=' Help'):
                 botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
                 data = botDbFetch()
             curver, prevver, updated, requests = data
-            dclient = docker.from_env()
-            containers = getContainers(dclient)
-            cont = containers['dbmage-bot']
-            uptime = str(datetime.now() - datetime.strptime(''.join(cont.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
+            uptime = str(datetime.now() - starttime).split('.')[0]
             await newmsg.edit(content=
                 "DBMage Bot :slight_smile:\n` %s `\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n` %s `" %
                 (
