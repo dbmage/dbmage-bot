@@ -42,9 +42,6 @@ PREFIX = config['prefix']
 INTENTS = discord.Intents.default()
 INTENTS.members = True
 dbbot = dcomm.Bot(command_prefix=PREFIX, description=DESCRIPTION, intents=INTENTS)
-imgregex = re.compile(r'([^\s]+\.(png|jpg|svg|gif))', re.IGNORECASE)
-userguild = None
-adminguild = None
 starttime = int(datetime.now().timestamp())
 
 ##Normal functions
