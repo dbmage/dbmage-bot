@@ -321,9 +321,11 @@ async def test():
     #     if skip == True:
     #         continue
     #     message = "%s\n" % (member.name)
+
     message = ''
-    async for item in guild.history(limit=10):
-        message += "%s\n" % (item)
+    async for channel in guild.fetch_channels():
+        async for item in channel.history(limit=10):
+            message += "%s\n" % (item)
     mydm = await mrmage.create_dm()
     await mydm.send(message)
         # sent += 1
