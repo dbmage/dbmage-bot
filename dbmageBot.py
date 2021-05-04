@@ -502,11 +502,8 @@ class HelpCog(dcomm.Cog, name=' Help'):
             data = botDbFetch()
             if data == None:
                 botDbUpdate('updated', int(datetime.now().timestamp()))
-                gitdir = '/app/'
-                if 'app' not in DB:
-                    gitdir = '.'
-                botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
-                botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+                botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+                botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
                 data = botDbFetch()
             curver, prevver, updated, requests = data
             uptime = int(datetime.now().timestamp() - starttime)
