@@ -17,5 +17,5 @@
     },
     "logdir" : "/var/log/",
     "description" : "DBMages helper bot",
-    "prefix" : ""
+    "prefix" : "."
 }
