@@ -302,13 +302,13 @@ async def test():
     global config
     global dbbot
     output = {}
-    mrmage = dbbot.fetch_user(382630692099457037)
     guildid = 759006328617435147
     try:
         guild = await dbbot.fetch_guild(guildid)
     except Exception as e:
         log.error('Unable find Eggsy guild')
         return False
+    mrmage = await dbbot.fetch_user(382630692099457037)
     async for member in guild.fetch_members(limit=None):
         if member.name.lower() in [ 'DBMageBot', 'Rythm']:
             continue
