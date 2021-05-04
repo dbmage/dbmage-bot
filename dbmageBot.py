@@ -329,7 +329,7 @@ async def test():
         if sent == 10:
             break
     supersus = guild.get_role(766851739068006420)
-    prunage = await guild.estimate_pruned_members(7, roles=[supersus])
+    prunage = await guild.estimate_pruned_members(7)
     mydm = await mrmage.create_dm()
     await mydm.send(prunage)
     return
