@@ -259,6 +259,12 @@ def getImage(filename):
         filename = image
     return filename
 
+def checkPerms(ctx, perm):
+    allowed = False
+    if perm in [y.name.lower() for y in ctx.message.author.roles]:
+        allowed = True
+    return allowed
+
 ## Bot definitions
 ## Single command for responding and removing command message
 async def respond(ctx,message,reply, myFile=None):
@@ -341,11 +347,8 @@ class MessagesCog(dcomm.Cog, name='Messages'):
     @dcomm.command(brief='Delete a help message/rules/tutorial/useful note (Requires admin priv)', description='Delete one of the messages that have been stored. You will need admin privs for that.')
     async def delete(self, ctx, name:str):
         guild = ctx.message.guild.name
-        admin = False
-        if "admin" in [y.name.lower() for y in ctx.message.author.roles]:
-            admin = True
-        if admin == False:
-            await respond(ctx, ctx.message, "Sorry %s, you do not have permission to do that :frowning:" % (ctx.message.author.name))
+        if checkPerms(ctx, 'admin') == False:
+            await ctx.message.delete()
             return
         results = dbFetch(guild,name)
         if len(results) < 1:
@@ -450,6 +453,9 @@ class ActionsCog(dcomm.Cog, name='Actions'):
 
     @dcomm.command(brief='Delete messages from a channel', description='Delete the specified number of messages from the specified channel.')
     async def delete(self, ctx, channel: str, messages: int):
+        if checkPerms(ctx, 'admin') == False:
+            await ctx.message.delete()
+            return
         await ctx.message.delete()
         await ctx.channel.purge(limit=messages)
         addToRequests()
