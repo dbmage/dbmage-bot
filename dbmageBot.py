@@ -12,7 +12,7 @@ from lazylog import Logger
 from shutil import copyfile
 from datetime import datetime,timedelta
 from json import loads as jloads
-from os import path,getenv,system
+from os import path,getenv,system,execv
 from subprocess import Popen, PIPE
 from discord.ext import commands as dcomm
 
@@ -265,6 +265,23 @@ def checkPerms(ctx, perm):
         allowed = True
     return allowed
 
+def botUpdate():
+    global currentdir
+    try:
+        output = Popen("git -C %s pull" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
+        curver, prevver, updated, requests = botDbFetch()
+        updatever = Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
+        if updatever == curver:
+            return 'Already up to date.'
+        botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+        botDbUpdate('updated', int(datetime.now().timestamp()))
+        botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+        sleep(5)
+        execv(sys.argv[0], sys.argv)
+    except Exception as e:
+        log.error("Error occured during update: %s" % (e))
+        return False
+
 ## Bot definitions
 ## Single command for responding and removing command message
 async def respond(ctx,message,reply, myFile=None):
@@ -444,12 +461,8 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         if msgauth != 'DBMage#5637':
             await ctx.message.delete()
             return
-        system("git -C %s pull" % (currentdir))
-        botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
-        botDbUpdate('updated', int(datetime.now().timestamp()))
-        botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
         await ctx.message.delete()
-        return
+        botUpdate()
 
     @dcomm.command(brief='Delete messages from a channel', description='Delete the specified number of messages from the specified channel.')
     async def purge(self, ctx, messages: int):
