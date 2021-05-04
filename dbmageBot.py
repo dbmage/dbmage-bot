@@ -4,6 +4,7 @@ import docker
 import discord
 import sqlite3
 import argparse
+import logging as log
 from time import sleep
 from lazylog import Logger
 from shutil import copyfile
