@@ -396,7 +396,7 @@ async def cornjob1():
     await mydm.send(message)
     return
 
-@aiocron.crontab('19 55 * * 5')
+@aiocron.crontab('55 19 * * 5')
 async def cornjob2():
     global config
     global dbbot
