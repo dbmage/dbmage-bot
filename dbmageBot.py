@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
 import docker
+import aiocron
 import discord
 import sqlite3
 import argparse
@@ -297,6 +298,28 @@ async def respond(ctx,message,reply, myFile=None):
     await message.delete()
     return newmsg
 
+async def test():
+    global config
+    global dbbot
+    output = {}
+    mrmage = dbbot.fetch_user(382630692099457037)
+    async for member in guild.fetch_members(limit=None):
+        if member.name.lower() in [ 'DBMageBot', 'Rythm']:
+            continue
+        skip = False
+        for role in member.roles:
+            if role.name.lower() in [ 'admin', 'sus', 'not sus', 'not so sus no more', 'bots']:
+                skip = True
+                break
+        if skip == True:
+            continue
+        message = "%s\n" % (member.name)
+        async for item in member.history(limit=None):
+            message += item
+        mydm = await mrmage.create_dm()
+        await mydm.send(message)
+    return
+
 ## Error catching
 @dbbot.event
 async def on_command_error(ctx, error):
@@ -343,6 +366,53 @@ async def on_message(message):
     #print("%s:\n\tContent: %s\n\tEmbeds:%s\n\tWebhook: %s\n\tAttachments: %s" % (message.author, message.content, message.embeds[0].title, message.webhook_id, message.attachments))
     #print(', '.join([y.name.lower() for y in message.author.roles]))
     await dbbot.process_commands(message)
+    return
+
+@aiocron.crontab('0 0 * * 6')
+async def cornjob1():
+    return True
+    global config
+    global dbbot
+    output = {}
+    async for member in guild.fetch_members(limit=None):
+        if member.name.lower() in [ 'DBMageBot', 'Rythm']:
+            continue
+        skip = False
+        for role in member.roles:
+            if role.name.lower() in [ 'admin', 'sus', 'not sus', 'not so sus no more', 'bots']:
+                skip = True
+                break
+        if skip == True:
+            continue
+        memberoutput []
+        async for item in member.history(limit=None):
+            memberoutput.append(item)
+        output[member.name] = memberoutput
+    message = ''
+    for member in output:
+        message += "%s: %s\n" % (member, ','.join(output[member]))
+    mrmage = dbbot.fetch_user(382630692099457037)
+    mydm = await mrmage.create_dm()
+    await mydm.send(message)
+    return
+
+@aiocron.crontab('19 55 * * 5')
+async def cornjob2():
+    global config
+    global dbbot
+    genid = 759006329049841714
+    guildid = 759006328617435147
+    try:
+        guild = await dbbot.fetch_guild(guildid)
+    except Exception as e:
+        log.error('Unable find Eggsy guild')
+        return False
+    channel = guild.get_channel(genid)
+    try:
+        await channel.send('@Not sus @sus @super sus @Not so sus no more 5 MINUTE REMINDER :smiley:')
+    except Exception as e:
+        log.error('Unable to remind channel of game night')
+        return False
     return
 
 class MessagesCog(dcomm.Cog, name='Messages'):
@@ -475,6 +545,15 @@ class ActionsCog(dcomm.Cog, name='Actions'):
             return
         await ctx.message.delete()
         await ctx.channel.purge(limit=messages)
+        return
+
+    @dcomm.command(brief='Testing :)', hidden=True)
+    async def test(self, ctx):
+        msgauth = str(ctx.message.author)
+        if msgauth != 'DBMage#5637':
+            await ctx.message.delete()
+            return
+        test()
         return
 
 class ScoreCog(dcomm.Cog, name='Score'):
