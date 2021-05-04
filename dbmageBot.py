@@ -509,7 +509,7 @@ class HelpCog(dcomm.Cog, name=' Help'):
                 botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (gitdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
                 data = botDbFetch()
             curver, prevver, updated, requests = data
-            uptime = int(datetime.now().timestamp()) - starttime)
+            uptime = int(datetime.now().timestamp() - starttime)
             uptime = str(datetime.timedelta(seconds=uptime))
             await newmsg.edit(content=
                 "DBMage Bot :slight_smile:\n` %s `\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n` %s `" %
