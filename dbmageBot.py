@@ -384,7 +384,7 @@ async def cornjob1():
                 break
         if skip == True:
             continue
-        memberoutput []
+        memberoutput = []
         async for item in member.history(limit=None):
             memberoutput.append(item)
         output[member.name] = memberoutput
