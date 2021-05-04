@@ -302,7 +302,8 @@ async def test():
     global config
     global dbbot
     output = {}
-    guildid = 759006328617435147
+    # guildid = 759006328617435147
+    guildid = 630168276957265946
     try:
         guild = dbbot.get_guild(guildid)
     except Exception as e:
