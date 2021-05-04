@@ -323,7 +323,7 @@ async def test():
     #     message = "%s\n" % (member.name)
 
     message = ''
-    for channel in await guild.fetch_channels():
+    for channel in guild.text_channels():
         async for item in channel.history(limit=10):
             message += "%s\n" % (item)
     mydm = await mrmage.create_dm()
