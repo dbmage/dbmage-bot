@@ -304,7 +304,7 @@ async def test():
     output = {}
     guildid = 759006328617435147
     try:
-        guild = await dbbot.fetch_guild(guildid)
+        guild = dbbot.get_guild(guildid)
     except Exception as e:
         log.error('Unable find Eggsy guild')
         return False
