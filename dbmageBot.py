@@ -309,6 +309,7 @@ async def test():
         log.error('Unable find Eggsy guild')
         return False
     mrmage = await dbbot.fetch_user(382630692099457037)
+    sent = 0
     async for member in guild.fetch_members(limit=None):
         if member.name.lower() in [ 'DBMageBot', 'Rythm']:
             continue
@@ -324,7 +325,9 @@ async def test():
             message += item
         mydm = await mrmage.create_dm()
         await mydm.send(message)
-        break
+        sent += 1
+        if sent == 10:
+            break
     return
 
 ## Error catching
