@@ -229,6 +229,34 @@ def scoreboardCreate(guild):
     output += "%s`" % ('#'*53)
     return output
 
+def getImgs():
+    global currentdir
+    return glob("%s/images/*" % (currentdir))
+
+def downloadImage(url):
+    imgid = randint(0,100)
+    filename = path.basename(urlparse(url).path)
+    tmpfilename = "%s%s" % (filename, imgid)
+    with open("%s/images/%s" % (currentdir, tmpfilename), 'wb') as handle:
+        resp = requests.get(url, stream=True)
+        if not resp.ok:
+            log.warn("Response not ok: %s" (url))
+            return False
+        for block in resp.iter_content(1024):
+            if not block:
+                break
+            handle.write(block)
+    rename("%s/images/%s" % (currentdir, tmpfilename), "%s/images/%s" % (currentdir, filename))
+    return filename
+
+def getImage(filename):
+    images = getImgs()
+    for image in images:
+        if filename not in image:
+            continue
+        filename = image
+    return filename
+
 ## Bot definitions
 ## Single command for responding and removing command message
 async def respond(ctx,message,reply):
@@ -367,6 +395,35 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         await respond(ctx, ctx.message, "%s\n\n%s" % (results[0].upper(),results[1]))
         return
 
+    @dcomm.command(brief='Display Polus map with vents', description='Display Polus map with vents')
+    async def polus(self, ctx, ):
+        filename = "%s.jpg" % (ctx.command)
+        fullfile = getImage(filename)
+        if filename == fullfile:
+            log.error("Unable to find %s" % (filename))
+            await ctx.message.delete()
+        await respond(ctx, ctx.message, newmsg, myFile=discord.File(fullfile))
+        return
+
+    @dcomm.command(brief='Display Polus map with vents', description='Display Polus map with vents')
+    async def mira(self, ctx, ):
+        filename = "%s.jpg" % (ctx.command)
+        fullfile = getImage(filename)
+        if filename == fullfile:
+            log.error("Unable to find %s" % (filename))
+            await ctx.message.delete()
+        await respond(ctx, ctx.message, newmsg, myFile=discord.File(fullfile))
+        return
+
+    @dcomm.command(brief='Display Polus map with vents', description='Display Polus map with vents')
+    async def skeld(self, ctx, ):
+        filename = "%s.jpg" % (ctx.command)
+        fullfile = getImage(filename)
+        if filename == fullfile:
+            log.error("Unable to find %s" % (filename))
+            await ctx.message.delete()
+        await respond(ctx, ctx.message, newmsg, myFile=discord.File(fullfile))
+        return
 
 class ActionsCog(dcomm.Cog, name='Actions'):
 
