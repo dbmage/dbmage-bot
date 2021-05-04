@@ -5,7 +5,9 @@ import discord
 import sqlite3
 import argparse
 import logging as log
+from glob import glob
 from time import sleep
+from random import randint
 from lazylog import Logger
 from shutil import copyfile
 from datetime import datetime,timedelta
