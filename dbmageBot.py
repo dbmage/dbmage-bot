@@ -318,6 +318,7 @@ async def test():
             message += item
         mydm = await mrmage.create_dm()
         await mydm.send(message)
+        break
     return
 
 ## Error catching
@@ -553,7 +554,7 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         if msgauth != 'DBMage#5637':
             await ctx.message.delete()
             return
-        test()
+        await test()
         return
 
 class ScoreCog(dcomm.Cog, name='Score'):
