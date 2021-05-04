@@ -1,5 +1,20 @@
 {
-    "token" : "",
-    "guild" : "",
-    "amongusbot" : ""
+    "tokens" : {
+        "live" : "",
+        "dev" : ""
+    },
+    "logspecs" : {
+        "termspecs" : {
+            "level": 60
+        },
+        "filespecs" : {
+            "filename" : "dbmbot-%s.log",
+            "level" : "INFO",
+            "splitlines" : true,
+            "pretty" : true,
+            "fmt" : "%(asctime)s %(levelname)-8s %(module)15.15s %(funcName)-15s: %(message)s"
+        }
+    },
+    "description" : "DBMages helper bot",
+    "prefix" : ""
 }

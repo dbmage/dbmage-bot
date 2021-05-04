@@ -3,7 +3,9 @@ import sys
 import docker
 import discord
 import sqlite3
+import argparse
 from time import sleep
+from lazylog import Logger
 from shutil import copyfile
 from datetime import datetime,timedelta
 from json import loads as jloads
@@ -13,30 +15,36 @@ from discord.ext import commands as dcomm
 
 currentdir = path.dirname(path.abspath(__file__))
 config = jloads(open("%s/config.json" % (currentdir)).read())
+parser = argparse.ArgumentParser(description='DBMage discord bot')
+parser.add_argument('-d', action='store_true', dest='dev', help='Run in dev mode')
+args = parser.parse_args()
 
-## Check if vars are in config or env
-if len(config['token']) == 0:
-    if getenv('TOKEN') == None:
-        print("ERROR: No token supplied")
-        sys.exit(1)
-    config['token'] = getenv('TOKEN')
-for thing in ['token', 'amongusbot']:
-    if len(config[thing]) == 0:
-        if getenv(thing.upper()) == None:
-            print("WARNING: No %s supplied" % (thing))
-        else:
-            config[thing] = getenv(thing.upper())
+MODE = 'live'
+config['logspecs']['filespecs']['level'] = getattr(log, config['logspecs']['filespecs']['level'], 'INFO')
+if args.dev == True:
+    MODE = 'dev'
+    config['logspecs']['filespecs']['level'] = getattr(log, 'DEBUG')
+# Set filename and init logger
+config['logspecs']['filespecs']['filename'] = config['logspecs']['filespecs']['filename'].replace('%s', MODE)
+Logger.init(config['logdir'], termSpecs=config['logspecs']['termspecs'], fileSpecs=[config['logspecs']['filespecs']])
+# Set discord module logging
+log.getLogger("discord").setLevel(log.WARNING)
 
-DB = '/app/db/bot.db'
-if getenv('DB') != None:
-    DB = getenv('DB')
-else:
-    if not path.exists('/'.join(DB.split('/')[:-1])):
-        print("Unable to create DB: %s does not exist" % ('/'.join(DB.split('/')[:-1])))
-        sys.exit(1)
-
-description = 'DBMages helper bot'
-dbbot = dcomm.Bot(command_prefix='.db ', description=description)
+TOKEN = config['tokens'][MODE]
+DB = "%s/bot-%s.db" % (currentdir, MODE)
+if len(TOKEN) < 1:
+    print("Please set the bots TOKEN")
+    log.error("No token in config")
+    sys.exit(1)
+DESCRIPTION = config['description']
+PREFIX = config['prefix']
+INTENTS = discord.Intents.default()
+INTENTS.members = True
+dbbot = dcomm.Bot(command_prefix=PREFIX, description=DESCRIPTION, intents=INTENTS)
+imgregex = re.compile(r'([^\s]+\.(png|jpg|svg|gif))', re.IGNORECASE)
+userguild = None
+adminguild = None
+starttime = int(datetime.now().timestamp())
 
 ##Normal functions
 def dbConn():
@@ -54,7 +62,7 @@ def dbConn():
             done = True
             return conn
         except sqlite3.OperationalError as e:
-            print("Unable to access DB: %s" % (e))
+            log.warning("Unable to access DB: %s" % (e))
             sleep(1)
             pass
     return False
@@ -66,7 +74,7 @@ def dbAdd(guild, dbkey, dbvalue):
         cursor.execute('INSERT INTO dbbot VALUES (?,?,?)', (guild,dbkey,dbvalue))
         conn.commit()
     except Exception as e:
-        print("Unable add %s-%s: %s" % (dbkey, dbvalue, e))
+        log.error("Unable add %s-%s: %s" % (dbkey, dbvalue, e))
         conn.close()
         return False
     conn.close()
@@ -79,7 +87,7 @@ def dbRem(guild, dbkey):
         cursor.execute('DELETE FROM dbbot WHERE dbkey=? AND guild=?', (dbkey,guild))
         conn.commit()
     except Exception as e:
-        print("Unable remove data with key %s: %s" % (dbkey, e))
+        log.error("Unable remove data with key %s: %s" % (dbkey, e))
         conn.close()
         return False
     conn.close()
@@ -105,7 +113,7 @@ def botDbAdd(row):
         cursor.execute('INSERT INTO botdata VALUES (?,?,?,?)', (row[0], row[1], row[2], row[3]))
         conn.commit()
     except Exception as e:
-        print("Unable update botdata: %s" % (e))
+        log.error("Unable update botdata: %s" % (e))
         conn.close()
         return False
     conn.close()
@@ -168,7 +176,7 @@ def scorePlayerAdd(guild, player):
         cursor.execute('INSERT INTO auscores VALUES (?,?,0,0,0,0)', (guild,player))
         conn.commit()
     except Exception as e:
-        print("Unable add %s: %s" % (player, e))
+        log.error("Unable add %s: %s" % (player, e))
         conn.close()
         return False
     conn.close()
@@ -182,7 +190,7 @@ def scorePlayerAdjust(guild, player,dbkey,dbvalue):
         cursor.execute(sql, (dbvalue, player))
         conn.commit()
     except Exception as e:
-        print("Unable update %s %s: %s" % (player, dbkey, e))
+        log.error("Unable update %s %s: %s" % (player, dbkey, e))
         conn.close()
         return False
     conn.close()
@@ -223,44 +231,6 @@ def scoreboardCreate(guild):
     output += "%s`" % ('#'*53)
     return output
 
-def getContainers(dclient):
-    containers = {}
-    for x in dclient.containers.list():
-        containers[x.attrs['Name'].replace('/','')] = x
-    return containers
-
-def getContainer(container):
-    dclient = docker.from_env()
-    conts = dclient.containers.list()
-    dclient.close()
-    for x in conts:
-        if x.attrs['Name'].replace('/','') == container:
-            return x
-    return None
-
-def getAuPort(container):
-    env = container.attrs['Config']['Env']
-    for var in env:
-        if 'SERVER_PORT' in var:
-            return var.split('=')[-1]
-    return None
-
-def getServerBotContainer(guild):
-    if guild == 'Denham':
-        return 'amongusbot-eggsy'
-    for i in config['amongusbot'].split(','):
-        if i.split('-')[-1] not in guild:
-            continue
-        return i
-    return None
-
-def getContStatus(container):
-    status = container.attrs['State']['Status']
-    uptime = None
-    if status == 'running':
-        uptime = str(datetime.now() - datetime.strptime(''.join(container.attrs['State']['StartedAt'].split('.')[0]), '%Y-%m-%dT%H:%M:%S')).split('.')[0]
-    return [status, uptime]
-
 ## Bot definitions
 ## Single command for responding and removing command message
 async def respond(ctx,message,reply):
@@ -289,13 +259,13 @@ async def on_command_error(ctx, error):
     if isinstance(error, dcomm.UserInputError):
         await respond(ctx, ctx.message, "Sorry %s, that command isn't quite right :slight_smile:, but no worries, use `.db help` to find out more about my available commands" % (msgauth))
         return
-    print("Error occured: %s" % (error))
+    log.error("Error occured: %s" % (error))
     return
 
 ## Confirm started
 @dbbot.event
 async def on_ready():
-    print("%s has connected to Discord!" % (dbbot.user))
+    log.info("%s has connected to Discord!" % (dbbot.user))
 
 ## process non commands
 @dbbot.event
@@ -399,48 +369,11 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         await respond(ctx, ctx.message, "%s\n\n%s" % (results[0].upper(),results[1]))
         return
 
-    @dcomm.command(brief='Display a Among Us bot status and details.', description='Display a Among Us bot status and details.')
-    async def aubot(self, ctx):
-        aubot = getServerBotContainer(ctx.message.guild.name)
-        if aubot == None:
-            await respond(ctx, ctx.message, "Could not find an Among Us bot connected to your server")
-            return
-        aubot = getContainer(aubot)
-        port = getAuPort(aubot)
-        status,uptime = getContStatus(aubot)
-        name = aubot.attrs['Name'].replace('/','')
-        status = "%s%s" % (status[0].upper(),status[1:])
-        if status != 'Running':
-            await respond(ctx, ctx.message, "AU Bot connection details\n`Name  : %-28s\nServer: %-28s\nStatus: %-28s`" % (name, "dbmage.co.uk:%s" % (port), status))
-        await respond(ctx, ctx.message, "AU Bot connection details\n`Name  : %-28s\nServer: %-28s\nStatus: %-28s`" % (name, "dbmage.co.uk:%s" % (port), "%s (%s)" % (status, uptime) ))
-        return
-
 
 class ActionsCog(dcomm.Cog, name='Actions'):
 
     def __init__(self, bot):
         self.bot = bot
-
-    @dcomm.command(brief='Restart the Among Us bot.', description='Restart the Among Us bot.')
-    async def restart(self, ctx):
-        aubot = getServerBotContainer(ctx.message.guild.name)
-        if aubot == None:
-            await respond(ctx, ctx.message, "Could not find an Among Us bot connected to your server")
-            return
-        if config['amongusbot'].replace(' ','') == '':
-            await respond(ctx, ctx.message, "Could not find an Among Us bot configured")
-            return
-        dclient = docker.from_env()
-        containers = getContainers(dclient)
-        if aubot not in containers:
-            dclient.close()
-            await respond(ctx, ctx.message, "Could not find an Among Us bot connected to your server")
-            return
-        cont = containers[config[aubot]]
-        cont.restart()
-        dclient.close()
-        await ctx.message.delete()
-        return True
 
     @dcomm.command(brief='Update the bots code.', hidden=True)
     async def update(self, ctx):
@@ -594,7 +527,7 @@ class HelpCog(dcomm.Cog, name=' Help'):
                 )
             )
         except Exception as e:
-            print("Error: %s" % (e))
+            log.error("Error: %s" % (e))
         return
 
 ## Add groups to bot
@@ -623,4 +556,4 @@ try:
 except KeyboardInterrupt:
     sys.exit(1)
 except Exception as e:
-    print("Error starting bot: %s" % (e))
+    log.error("Error starting bot: %s" % (e))
