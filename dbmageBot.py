@@ -508,6 +508,7 @@ class HelpCog(dcomm.Cog, name=' Help'):
             curver, prevver, updated, requests = data
             uptime = int(datetime.now().timestamp() - starttime)
             uptime = str(timedelta(seconds=uptime))
+            updated = datetime.fromtimestamp(updated).strftime('%d-%m-%Y %H:%M:%S')
             await newmsg.edit(content=
                 "DBMage Bot :slight_smile:\n` %s `\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n`|%-18s : %-20s|`\n` %s `" %
                 (
