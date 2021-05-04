@@ -379,10 +379,10 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         if msgauth != 'DBMage#5637':
             await ctx.message.delete()
             return
-        system('git -C /app/ pull')
-        botDbUpdate('prevver', Popen("git -C /app/ rev-parse --short HEAD~1", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+        system("git -C %s pull" % (currentdir))
+        botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
         botDbUpdate('updated', int(datetime.now().timestamp()))
-        botDbUpdate('curver', Popen("git -C /app/ rev-parse --short HEAD", shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+        botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
         await ctx.message.delete()
         return
 
