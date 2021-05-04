@@ -15,6 +15,7 @@
             "fmt" : "%(asctime)s %(levelname)-8s %(module)15.15s %(funcName)-15s: %(message)s"
         }
     },
+    "logdir" : "/var/log/",
     "description" : "DBMages helper bot",
     "prefix" : ""
 }
