@@ -124,15 +124,15 @@ def botDbUpdate(key, value):
     keys = {
         'prevver' : {
             'key' : 0,
-            'base' : ''
+            'base' : Popen("git -C %s rev-parse --short HEAD~1" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
         },
         'curver' : {
             'key' : 1,
-            'base' : ''
+            'base' : Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
         },
         'updated' : {
             'key' : 2,
-            'base' : 0
+            'base' : int(datetime.now().timestamp())
         },
         'requests' : {
             'key' : 3,
