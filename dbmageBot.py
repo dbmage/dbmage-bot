@@ -324,6 +324,7 @@ async def test():
 
     message = ''
     channels = guild.text_channels()
+    log.warning(channels)
     for channel in channels:
         log.warning(channel)
         channel = channels[channel]
