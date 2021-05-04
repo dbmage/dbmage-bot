@@ -325,7 +325,9 @@ async def test():
     message = ''
     channels = guild.text_channels()
     for channel in channels:
+        log.warning(channel)
         channel = channels[channel]
+        log.warning(channel)
         async for item in channel.history(limit=10):
             message += "%s\n" % (item)
     mydm = await mrmage.create_dm()
