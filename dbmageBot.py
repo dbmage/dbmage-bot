@@ -550,7 +550,7 @@ try:
     ## So catch the error and pass
     dbbot.help_command.add_check(removeCall)
     dbbot.help_command.cog = dbbot.get_cog(' Help')
-    dbbot.run(config['token'])
+    dbbot.run(TOKEN)
 except KeyboardInterrupt:
     sys.exit(1)
 except Exception as e:
