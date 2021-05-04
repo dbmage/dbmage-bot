@@ -261,13 +261,16 @@ def getImage(filename):
 
 ## Bot definitions
 ## Single command for responding and removing command message
-async def respond(ctx,message,reply):
+async def respond(ctx,message,reply, myFile=None):
     row = botDbFetch()
     if row == None:
         botDbUpdate('requests', 1)
     else:
         botDbUpdate('requests', row[3] + 1)
-    newmsg = await ctx.send(reply)
+    if not myFile:
+        newmsg = await ctx.send(reply)
+    else:
+        newmsg = await ctx.send(reply, file=myFile)
     await message.delete()
     return newmsg
 
