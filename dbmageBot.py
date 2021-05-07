@@ -413,7 +413,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
         return
 
-    @dcomm.command(brief='Display Polus map with vents', description='Display Polus map with vents')
+    @dcomm.command(brief='Display mira map with vents', description='Display Mira map with vents')
     async def mira(self, ctx, ):
         filename = "%s.jpg" % (ctx.command)
         fullfile = getImage(filename)
@@ -423,7 +423,7 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
         return
 
-    @dcomm.command(brief='Display Polus map with vents', description='Display Polus map with vents')
+    @dcomm.command(brief='Display Skeld map with vents', description='Display Skeld map with vents')
     async def skeld(self, ctx, ):
         filename = "%s.jpg" % (ctx.command)
         fullfile = getImage(filename)
@@ -432,6 +432,17 @@ class MessagesCog(dcomm.Cog, name='Messages'):
             await ctx.message.delete()
         await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
         return
+
+    @dcomm.command(brief='Display Airship map with vents', description='Display Airship map with vents')
+    async def airship(self, ctx, ):
+        filename = "%s.png" % (ctx.command)
+        fullfile = getImage(filename)
+        if filename == fullfile:
+            log.error("Unable to find %s" % (filename))
+            await ctx.message.delete()
+        await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
+        return
+
 
 class ActionsCog(dcomm.Cog, name='Actions'):
 
