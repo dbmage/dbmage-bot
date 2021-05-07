@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
 import docker
+import aiocron
 import discord
 import sqlite3
 import argparse
@@ -12,7 +13,7 @@ from lazylog import Logger
 from shutil import copyfile
 from datetime import datetime,timedelta
 from json import loads as jloads
-from os import path,getenv,system
+from os import path,getenv,system,execv
 from subprocess import Popen, PIPE
 from discord.ext import commands as dcomm
 
@@ -265,6 +266,23 @@ def checkPerms(ctx, perm):
         allowed = True
     return allowed
 
+def botUpdate():
+    global currentdir
+    try:
+        output = Popen("git -C %s pull" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
+        curver, prevver, updated, requests = botDbFetch()
+        updatever = Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8')
+        if updatever == curver:
+            return 'Already up to date.'
+        botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+        botDbUpdate('updated', int(datetime.now().timestamp()))
+        botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
+        sleep(5)
+        execv(sys.argv[0], sys.argv)
+    except Exception as e:
+        log.error("Error occured during update: %s" % (e))
+        return False
+
 ## Bot definitions
 ## Single command for responding and removing command message
 async def respond(ctx,message,reply, myFile=None):
@@ -279,6 +297,44 @@ async def respond(ctx,message,reply, myFile=None):
         newmsg = await ctx.send(reply, file=myFile)
     await message.delete()
     return newmsg
+
+async def test():
+    global config
+    global dbbot
+    output = {}
+    guildid = 759006328617435147
+    # guildid = 630168276957265946
+    try:
+        guild = dbbot.get_guild(guildid)
+    except Exception as e:
+        log.error('Unable find Eggsy guild')
+        return False
+    mrmage = await dbbot.fetch_user(382630692099457037)
+    sent = 0
+    # async for member in guild.fetch_members(limit=None):
+    #     if member.name.lower() in [ 'DBMageBot', 'Rythm']:
+    #         continue
+    #     skip = False
+    #     for role in member.roles:
+    #         if role.name.lower() in [ 'admin', 'sus', 'not sus', 'not so sus no more', 'bots']:
+    #             skip = True
+    #             break
+    #     if skip == True:
+    #         continue
+    #     message = "%s\n" % (member.name)
+
+    message = ''
+    channels = guild.text_channels
+    for channel in channels:
+        async for item in channel.history(limit=1):
+            message += "%s\n" % (item)
+    mydm = await mrmage.create_dm()
+    await mydm.send(message)
+        # sent += 1
+        # if sent == 10:
+        #     break
+
+    return
 
 ## Error catching
 @dbbot.event
@@ -326,6 +382,59 @@ async def on_message(message):
     #print("%s:\n\tContent: %s\n\tEmbeds:%s\n\tWebhook: %s\n\tAttachments: %s" % (message.author, message.content, message.embeds[0].title, message.webhook_id, message.attachments))
     #print(', '.join([y.name.lower() for y in message.author.roles]))
     await dbbot.process_commands(message)
+    return
+
+@aiocron.crontab('0 0 * * 6')
+async def cornjob1():
+    return True
+    global config
+    global dbbot
+    output = {}
+    guildid = 759006328617435147
+    try:
+        guild = await dbbot.fetch_guild(guildid)
+    except Exception as e:
+        log.error('Unable find Eggsy guild')
+        return False
+    async for member in guild.fetch_members(limit=None):
+        if member.name.lower() in [ 'DBMageBot', 'Rythm']:
+            continue
+        skip = False
+        for role in member.roles:
+            if role.name.lower() in [ 'admin', 'sus', 'not sus', 'not so sus no more', 'bots']:
+                skip = True
+                break
+        if skip == True:
+            continue
+        memberoutput = []
+        async for item in member.history(limit=None):
+            memberoutput.append(item)
+        output[member.name] = memberoutput
+    message = ''
+    for member in output:
+        message += "%s: %s\n" % (member, ','.join(output[member]))
+    mrmage = dbbot.fetch_user(382630692099457037)
+    mydm = await mrmage.create_dm()
+    await mydm.send(message)
+    return
+
+@aiocron.crontab('55 19 * * 5')
+async def cornjob2():
+    global config
+    global dbbot
+    genid = 759006329049841714
+    guildid = 759006328617435147
+    try:
+        guild = await dbbot.fetch_guild(guildid)
+    except Exception as e:
+        log.error('Unable find Eggsy guild')
+        return False
+    channel = guild.get_channel(genid)
+    try:
+        await channel.send('@Not sus @sus @super sus @Not so sus no more 5 MINUTE REMINDER :smiley:')
+    except Exception as e:
+        log.error('Unable to remind channel of game night')
+        return False
     return
 
 class MessagesCog(dcomm.Cog, name='Messages'):
@@ -455,11 +564,11 @@ class ActionsCog(dcomm.Cog, name='Actions'):
         if msgauth != 'DBMage#5637':
             await ctx.message.delete()
             return
-        system("git -C %s pull" % (currentdir))
-        botDbUpdate('prevver', Popen("git -C %s rev-parse --short HEAD~1" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
-        botDbUpdate('updated', int(datetime.now().timestamp()))
-        botDbUpdate('curver', Popen("git -C %s rev-parse --short HEAD" % (currentdir), shell=True, stdout=PIPE).communicate()[0].strip().decode('utf-8'))
         await ctx.message.delete()
+        resp = botUpdate()
+        if resp == False:
+            return
+        await respond(ctx, ctx.message, resp)
         return
 
     @dcomm.command(brief='Delete messages from a channel', description='Delete the specified number of messages from the specified channel.')
@@ -469,7 +578,15 @@ class ActionsCog(dcomm.Cog, name='Actions'):
             return
         await ctx.message.delete()
         await ctx.channel.purge(limit=messages)
-        addToRequests()
+        return
+
+    @dcomm.command(brief='Testing :)', hidden=True)
+    async def test(self, ctx):
+        msgauth = str(ctx.message.author)
+        if msgauth != 'DBMage#5637':
+            await ctx.message.delete()
+            return
+        await test()
         return
 
 class ScoreCog(dcomm.Cog, name='Score'):
