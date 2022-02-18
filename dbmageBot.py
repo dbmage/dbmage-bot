@@ -243,7 +243,7 @@ def downloadImage(url):
     with open("%s/images/%s" % (currentdir, tmpfilename), 'wb') as handle:
         resp = requests.get(url, stream=True)
         if not resp.ok:
-            log.warn("Response not ok: %s" (url))
+            log.warn("Response not ok: %s",url)
             return False
         for block in resp.iter_content(1024):
             if not block:
