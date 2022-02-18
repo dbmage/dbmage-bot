@@ -559,10 +559,10 @@ class MessagesCog(dcomm.Cog, name='Messages'):
             try:
                 mcnum = int(ptype.lower().replace('mc',''))
             except:
-                await aFunc.respond(ctx, ctx.message, "That is an invalid type")
+                await respond(ctx, ctx.message, "That is an invalid type")
                 return
         response = "**POLL:** %s" % (question)
-        msg = await aFunc.respond(ctx, ctx.message, response)
+        msg = await respond(ctx, ctx.message, response)
         if ptype.lower() == 'yn':
             await msg.add_reaction("👍")
             await msg.add_reaction("👎")
