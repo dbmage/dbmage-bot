@@ -552,6 +552,32 @@ class MessagesCog(dcomm.Cog, name='Messages'):
         await respond(ctx, ctx.message, '', myFile=discord.File(fullfile))
         return
 
+    @dcomm.command(brief='Create a poll', description='Create a poll with predefined reactions')
+    async def poll(self, ctx, ptype: str, *, question: str):
+        numericreactions = ["{}\N{COMBINING ENCLOSING KEYCAP}".format(num) for num in range(0, 10)]
+        if 'mc' in ptype.lower():
+            try:
+                mcnum = int(ptype.lower().replace('mc',''))
+            except:
+                await aFunc.respond(ctx, ctx.message, "That is an invalid type")
+                return
+        response = "**POLL:** %s" % (question)
+        msg = await aFunc.respond(ctx, ctx.message, response)
+        if ptype.lower() == 'yn':
+            await msg.add_reaction("👍")
+            await msg.add_reaction("👎")
+            return
+        if 'mc' in ptype.lower():
+            if mcnum > 9:
+                mcnum = 9
+            if mcnum < 2:
+                mcnum = 2
+            for i in range(1,mcnum+1):
+                await msg.add_reaction(numericreactions[i])
+            return
+        await ctx.message.delete()
+        return
+
 
 class ActionsCog(dcomm.Cog, name='Actions'):
 
