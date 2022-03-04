@@ -365,6 +365,9 @@ async def on_ready():
 async def on_message(message):
     if message.author == dbbot.user:
         return
+    if dbbot.user in message.mentions and 'what time is it' in message.content.lower():
+        await message.reply(f'It\'s game time {str(message.author)}!')
+        return
     if message.author.name == 'amongus-bot-eggsy' and len(message.embeds) > 0 and message.embeds[0].title.lower() == 'lobby is open!':
         board = scoreboardCreate(message.guild.name)
         if board == False:
